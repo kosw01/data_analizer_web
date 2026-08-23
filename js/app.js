@@ -261,6 +261,20 @@ document.addEventListener("change", e => {
   redraw(kind);
 });
 
+/* 샘플레이트 재지정 — 어느 화면에서든 통한다.
+   타임스탬프가 잘못 찍힌 파일도 여기서 바로잡는다 */
+document.addEventListener("input", e => {
+  const cid = e.target.dataset.fs; if (!cid) return;
+  const v = parseFloat(e.target.value);
+  if (!(v > 0)) return;
+  const ch = store.channels.find(c => c.id === cid);
+  if (!ch) return;
+  ch.sampleRate = v;
+  ch.rateOverride = true;
+  cbModesKey = "";                       // 주파수가 통째로 달라지므로 차수를 다시 잡는다
+  renderChannels();
+});
+
 /* ============================================================
    케이블 장력
    ============================================================ */

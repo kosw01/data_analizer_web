@@ -56,14 +56,15 @@ function renderChannels() {
   const box = $("chList"); box.innerHTML = "";
   store.channels.forEach(ch => {
     const p = canProcess(ch);
-    const kind = ch.timeKind === "index" ? `${ch.sampleRate} Hz 지정`
-      : ch.timeKind === "uniform" ? `등간격 ${fmtNum(ch.sampleRate, 3)} Hz` : "불규칙 시간축";
+    const kind = ch.timeKind === "index" ? "시간축 없음"
+      : ch.timeKind === "uniform" ? "등간격" : "불규칙 시간축";
     const el = document.createElement("div");
     el.className = "ch";
     el.innerHTML = `
       <span class="dot" style="background:${ch.color}"></span>
       <div class="info"><div class="nm">${ch.name}</div>
         <div class="src">${ch.source} · ${ch.n.toLocaleString()}점 · ${kind} · ${fmtNum(ch.min, 3)} ~ ${fmtNum(ch.max, 3)}${ch.nan ? ` · 결측 ${ch.nan.toLocaleString()}개` : ""}</div></div>
+      <span class="chip hz"><span class="k">${ch.rateOverride ? "재지정" : "샘플레이트"}</span><input type="number" step="any" min="0.001" value="${ch.sampleRate}" data-fs="${ch.id}"> Hz</span>
       <span class="chip ${p.ok ? "ok" : "bad"}" title="${p.why}">${p.ok ? "FFT·필터 가능" : "FFT·필터 불가"}</span>
       <button class="b btn-ghost btn-sm" data-chdel="${ch.id}">제거</button>`;
     box.appendChild(el);

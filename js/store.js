@@ -31,7 +31,7 @@ const ui = {
     ts: { title:"", xLabel:"", yLabel:"", yMin:"", yMax:"", lineWidth:1.4, ratio:"4:3", grid:true, limits: newLimits() },
     xy: { title:"", xLabel:"", yLabel:"", yMin:"", yMax:"", dot:2.2, ratio:"4:3", grid:true, limits: newLimits() },
     sp: {
-      zero:"none", filter:"none", lowCut:10, highCut:1,
+      zero:"mean", filter:"none", lowCut:10, highCut:1,
       N:4096, win:"hann", welch:true, log:false, fmax:"", skip:10,
       showRaw:true, ratio:"2:1", sRatio:"4:3",
       title:"", sTitle:"", grid:true, limits: newLimits()

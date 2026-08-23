@@ -39,7 +39,12 @@ function computeSP() {
 
   const N = Math.min(+cfg.N, 1 << 20);
   let sp = null;
-  if (n < N) notes.push(`구간이 ${n.toLocaleString()}점이라 윈도우 ${N.toLocaleString()}보다 짧습니다. 뒤를 0으로 채웁니다`);
+  if (n < N) {
+    let fit = 1024;
+    for (const w of WINDOW_SIZES) if (w <= n) fit = w;
+    notes.push(`구간이 ${n.toLocaleString()}점(${fmtNum(n / fs, 1)}초)이라 윈도우 ${N.toLocaleString()}보다 짧습니다. `
+      + `뒤를 0으로 채웁니다 — 윈도우를 ${fit.toLocaleString()}로 낮추면 겹쳐 평균이 됩니다`);
+  }
   sp = spectrum(ft.data, fs, N, cfg.win, cfg.welch);
 
   /* 봉우리는 화면에 보이는 주파수 범위 안에서만 찾는다.
@@ -223,11 +228,14 @@ function renderSPInfo() {
     : "";
   const skip = Math.max(1, +ui.cfg.sp.skip || 1);
   note.innerHTML = [
-    `샘플레이트 ${fmtHz(fs)} · 나이퀴스트 ${fmtHz(sp.nyquist)} · 분해능 ${fmtHz(sp.df)}`,
-    `앞쪽 ${skip}개 빈 제외 (${fmtHz(skip * sp.df)} 미만은 표시·탐색에서 뺍니다)`,
+    `샘플레이트 ${fmtHz(fs)} · 나이퀴스트 ${fmtHz(sp.nyquist)} · 분해능 ${fmtHz(sp.df)} · 창 길이 ${fmtNum(+ui.cfg.sp.N / fs, 1)}초`,
+    `앞쪽 ${skip}개 빈 제외 · ${fmtHz(skip * sp.df)} 미만은 표시·탐색에서 뺍니다`,
+    ui.cfg.sp.zero === "none"
+      ? "기준 맞추기가 '없음'입니다. DC 성분이 남아 낮은 주파수에 큰 봉우리로 보입니다"
+      : "",
     `구간 ${n.toLocaleString()}점 · 평균 조각 ${sp.segments}개 · 계산 ${ms.toFixed(0)}ms`,
     ...R0.notes
-  ].join("<br>");
+  ].filter(Boolean).join("<br>");
   $("spCsv").disabled = false;
 }
 

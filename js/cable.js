@@ -13,18 +13,25 @@ const MASS_UNITS = {
 };
 const G = 9.80665;
 
-/* modes = [{ n, f }] 중 실제로 쓸 것만 넘긴다 */
+/* modes = [{ n, f }] 중 실제로 쓸 것만 넘긴다.
+
+   단위질량과 유효길이는 **장력 값에만** 필요하다.
+   (fn/n)² 와 n² 회귀는 제원 없이도 성립하므로, 제원이 없다고 회귀까지
+   막으면 안 된다. 실제로 그렇게 묶어놨다가 회귀 그래프가 안 그려졌다. */
 function cableTension(modes, mTon, L) {
-  if (!(mTon > 0) || !(L > 0) || !modes.length) return null;
-  const k = 4 * mTon * L * L;
+  if (!modes || !modes.length) return null;
+
+  const hasProps = mTon > 0 && L > 0;
+  const k = hasProps ? 4 * mTon * L * L : null;
 
   const rows = modes.map(({ n, f }) => {
     const y = (f / n) * (f / n);
-    return { n, f, n2: n * n, y, T: k * y };
+    return { n, f, n2: n * n, y, T: k === null ? null : k * y };
   });
 
   const cnt = rows.length;
-  const single = k * rows.reduce((a, r) => a + r.y, 0) / cnt;
+  const meanY = rows.reduce((a, r) => a + r.y, 0) / cnt;
+  const single = k === null ? null : k * meanY;
 
   let multi = null, slope = null, intercept = null, corr = null, EI = null;
   if (cnt >= 2) {
@@ -40,17 +47,19 @@ function cableTension(modes, mTon, L) {
       intercept = (sy - slope * sx) / cnt;
       const rden = Math.sqrt(den * (cnt * syy - sy * sy));
       corr = rden ? (cnt * sxy - sx * sy) / rden : null;
-      multi = k * intercept;
-      EI = slope * 4 * mTon * Math.pow(L, 4) / (Math.PI * Math.PI);
+      if (hasProps) {
+        multi = k * intercept;
+        EI = slope * 4 * mTon * Math.pow(L, 4) / (Math.PI * Math.PI);
+      }
     }
   }
 
   return {
-    rows, k, count: cnt,
-    single, singleTonf: single / G,
+    rows, k, count: cnt, hasProps, meanY,
+    single, singleTonf: single === null ? null : single / G,
     multi, multiTonf: multi === null ? null : multi / G,
     slope, intercept, corr, EI,
-    w: mTon * G
+    w: hasProps ? mTon * G : null
   };
 }
 
@@ -153,7 +162,13 @@ function computeCable() {
   const N = +cfg.N;
   const sp = spectrum(data, fs, N, cfg.win, true);
   if (!sp) return null;
-  if (n < N) notes.push(`구간이 ${n.toLocaleString()}점이라 윈도우 ${N.toLocaleString()}보다 짧습니다`);
+  if (n < N) {
+    /* 2의 거듭제곱 중 구간에 들어가는 가장 큰 값 */
+    let fit = 1024;
+    for (const w of WINDOW_SIZES) if (w <= n) fit = w;
+    notes.push(`구간이 ${n.toLocaleString()}점(${fmtNum(n / fs, 1)}초)이라 윈도우 ${N.toLocaleString()}보다 짧습니다. `
+      + `뒤를 0으로 채웁니다 — 윈도우를 ${fit.toLocaleString()}로 낮추면 겹쳐 평균이 됩니다`);
+  }
 
   const peaks = findPeaks(sp, 30, cfg.win, {
     fMin, fMax, minSep: Math.max(sp.df * 4, +cfg.minSep || 0.1), prominence: 1.4
@@ -261,9 +276,10 @@ function renderCable(ctx, w, h, th) {
 function renderRegression(ctx, w, h, th, res) {
   const T = res || (cbResult && cbResult.T);
   if (th.bg) { ctx.fillStyle = th.bg; ctx.fillRect(0, 0, w, h); }
-  if (!T || T.count < 2) {
+  if (!T || T.count < 2 || T.intercept === null) {
     ctx.fillStyle = th.textDim; ctx.font = "13px -apple-system,sans-serif"; ctx.textAlign = "center";
-    ctx.fillText("차수를 두 개 이상 선택하면 회귀선이 그려집니다.", w / 2, h / 2);
+    ctx.fillText(!T ? "사용할 차수를 체크하세요."
+                    : "차수를 두 개 이상 체크하면 회귀선이 그려집니다.", w / 2, h / 2);
     return null;
   }
   const xs = T.rows.map(r => r.n2), ys = T.rows.map(r => r.y);
@@ -345,30 +361,53 @@ function renderCableInfo() {
     ? `${est.f1.toFixed(4)} Hz (차수 ${est.orders.join(",")} 인식${est.extrapolated ? " · 역산" : ""})`
     : "추정 실패";
 
-  props.innerHTML = (mTon > 0 && L > 0)
-    ? `<span class="chip">w ${(mTon * G).toFixed(5)} kN/m</span>
-       <span class="chip">m ${mTon.toFixed(5)} ton/m</span>
-       <span class="chip">Leff ${L} m</span>
-       <span class="chip">4mL² ${(4 * mTon * L * L).toFixed(4)}</span>`
-    : `<span class="chip warn">단위질량과 유효길이를 입력하세요</span>`;
+  /* 장력은 샘플레이트의 제곱에 비례한다. 지금 몇 Hz로 계산 중인지 늘 보이게 둔다 */
+  const sp = R0.sp;
+  const chips = [
+    `<span class="chip hz"><span class="k">샘플레이트</span>` +
+      `<input type="number" step="any" min="0.001" value="${R0.fs}" data-fs="${R0.ch.id}"> Hz</span>`,
+    `<span class="chip"><span class="k">나이퀴스트</span>${fmtHz(sp.nyquist)}</span>`,
+    `<span class="chip"><span class="k">분해능</span>${fmtHz(sp.df)}</span>`,
+    `<span class="chip"><span class="k">창 길이</span>${fmtNum(+ui.cfg.cb.N / R0.fs, 1)}초</span>`
+  ];
+  if (mTon > 0 && L > 0) {
+    chips.push(`<span class="chip">w ${(mTon * G).toFixed(5)} kN/m</span>`);
+    chips.push(`<span class="chip">m ${mTon.toFixed(5)} ton/m</span>`);
+    chips.push(`<span class="chip">Leff ${L} m</span>`);
+    chips.push(`<span class="chip">4mL² ${(4 * mTon * L * L).toFixed(4)}</span>`);
+  } else {
+    chips.push(`<span class="chip warn">단위질량과 유효길이를 입력하세요</span>`);
+  }
+  props.innerHTML = chips.join("");
 
-  if (!T) { box.innerHTML = ""; note.innerHTML = R0.notes.join("<br>"); $("cbAdd").disabled = true; return; }
+  if (!T) {
+    box.innerHTML = "";
+    note.innerHTML = ["사용할 차수를 하나 이상 체크하세요", ...R0.notes].join("<br>");
+    $("cbAdd").disabled = true;
+    return;
+  }
 
-  const c = [`<span class="b"><b>${T.single.toFixed(2)} kN</b>Single Mode · ${T.singleTonf.toFixed(2)} tonf</span>`];
-  c.push(T.multi !== null
-    ? `<span class="b"><b>${T.multi.toFixed(2)} kN</b>Multi-Mode · ${T.multiTonf.toFixed(2)} tonf</span>`
-    : `<span class="b" style="background:var(--warnBg);color:var(--warn)"><b>차수 2개 필요</b>다중모드 회귀</span>`);
+  const c = [];
+  if (T.hasProps) {
+    c.push(`<span class="b"><b>${T.single.toFixed(2)} kN</b>Single Mode · ${T.singleTonf.toFixed(2)} tonf</span>`);
+    c.push(T.multi !== null
+      ? `<span class="b"><b>${T.multi.toFixed(2)} kN</b>Multi-Mode · ${T.multiTonf.toFixed(2)} tonf</span>`
+      : `<span class="b" style="background:var(--warnBg);color:var(--warn)"><b>차수 2개 필요</b>다중모드 회귀</span>`);
+  } else {
+    c.push(`<span class="b" style="background:var(--warnBg);color:var(--warn)"><b>제원 입력 필요</b>단위질량과 유효길이를 넣으면 장력이 나옵니다</span>`);
+  }
   box.innerHTML = c.join("");
 
   note.innerHTML = [
-    T.multi !== null
-      ? `y-절편 ${T.intercept.toFixed(5)} · 기울기 ${T.slope.toExponential(4)} · 상관계수 ${T.corr.toFixed(5)} · 휨강성 ${T.EI.toFixed(3)} kN·m²`
-      : "",
+    T.count >= 2 && T.intercept !== null
+      ? `y-절편 ${T.intercept.toFixed(5)} · 기울기 ${T.slope.toExponential(4)} · 상관계수 ${T.corr.toFixed(5)}`
+        + (T.EI !== null ? ` · 휨강성 ${T.EI.toFixed(3)} kN·m²` : " · 휨강성은 제원을 넣어야 나옵니다")
+      : "차수를 두 개 이상 체크하면 회귀값이 나옵니다",
     `사용 차수 ${T.count}개`,
     ...R0.notes
   ].filter(Boolean).join("<br>");
 
-  $("cbAdd").disabled = false;
+  $("cbAdd").disabled = !T.hasProps;
 }
 
 /* ---- 결과 모으기: 보고서 한 장이 여기서 만들어진다 ----
@@ -411,7 +450,7 @@ function renderCableList() {
       <th>Single (kN)</th><th>Multi (kN)</th><th>Multi (tonf)</th><th>상관계수</th><th></th></tr></thead><tbody>` +
     rows.map((r, i) => `<tr>
       <td>${r.name}</td><td>${r.mIn} ${r.unitLabel}</td><td>${r.L} m</td><td>${r.T.count}</td>
-      <td>${r.T.single.toFixed(1)}</td>
+      <td>${r.T.single === null ? "—" : r.T.single.toFixed(1)}</td>
       <td>${r.T.multi === null ? "—" : r.T.multi.toFixed(1)}</td>
       <td>${r.T.multiTonf === null ? "—" : r.T.multiTonf.toFixed(2)}</td>
       <td>${r.T.corr === null ? "—" : r.T.corr.toFixed(3)}</td>
@@ -429,10 +468,10 @@ function exportCableCsv() {
   const lines = [head.join(",")];
   for (const r of rows) {
     const T = r.T;
-    lines.push([r.bridge, r.name, r.source, r.mIn, r.unitLabel, r.mTon, T.w, r.L, T.count,
+    lines.push([r.bridge, r.name, r.source, r.mIn, r.unitLabel, r.mTon, T.w === null ? "" : T.w, r.L, T.count,
       T.intercept === null ? "" : T.intercept, T.slope === null ? "" : T.slope,
       T.corr === null ? "" : T.corr, T.EI === null ? "" : T.EI,
-      T.single, T.singleTonf,
+      T.single === null ? "" : T.single, T.singleTonf === null ? "" : T.singleTonf,
       T.multi === null ? "" : T.multi, T.multiTonf === null ? "" : T.multiTonf
     ].map(esc).join(","));
   }
@@ -476,8 +515,8 @@ function renderReport() {
 
       <h3>□ Cable Properties</h3>
       <table class="rp-kv">
-        <tr><th>w (weight per unit length)</th><td>${T.w.toFixed(5)}</td><td>[kN/m]</td></tr>
-        <tr><th>m (mass per unit length)</th><td>${r.mTon.toFixed(5)}</td><td>[ton/m]</td></tr>
+        <tr><th>w (weight per unit length)</th><td>${T.w === null ? "—" : T.w.toFixed(5)}</td><td>[kN/m]</td></tr>
+        <tr><th>m (mass per unit length)</th><td>${r.mTon === null ? "—" : r.mTon.toFixed(5)}</td><td>[ton/m]</td></tr>
         <tr><th>Leff (effective length)</th><td>${r.L}</td><td>[m]</td></tr>
       </table>
 
@@ -485,7 +524,7 @@ function renderReport() {
       <table class="rp-tbl">
         <thead><tr><th>n</th><th>fn [Hz]</th><th>n²</th><th>(fn/n)²</th><th>T [kN]</th></tr></thead>
         <tbody>${T.rows.map(x =>
-          `<tr><td>${x.n}</td><td>${x.f.toFixed(5)}</td><td>${x.n2}</td><td>${x.y.toFixed(5)}</td><td>${x.T.toFixed(5)}</td></tr>`
+          `<tr><td>${x.n}</td><td>${x.f.toFixed(5)}</td><td>${x.n2}</td><td>${x.y.toFixed(5)}</td><td>${x.T === null ? "—" : x.T.toFixed(5)}</td></tr>`
         ).join("")}</tbody>
       </table>
 
@@ -495,7 +534,7 @@ function renderReport() {
         <tr><th>Slope</th><td>${T.slope === null ? "—" : T.slope.toExponential(5)}</td><td></td></tr>
         <tr><th>Correlation Coefficient</th><td>${T.corr === null ? "—" : T.corr.toFixed(5)}</td><td></td></tr>
         <tr><th>Flexural Rigidity for Cable</th><td>${T.EI === null ? "—" : T.EI.toFixed(5)}</td><td>[kN·m²]</td></tr>
-        <tr class="hl"><th>Tension by Single Mode</th><td>${T.single.toFixed(5)}</td><td>[kN]</td></tr>
+        <tr class="hl"><th>Tension by Single Mode</th><td>${T.single === null ? "—" : T.single.toFixed(5)}</td><td>[kN]</td></tr>
         <tr class="hl"><th>Tension by Multi-Mode</th><td>${T.multi === null ? "—" : T.multi.toFixed(5)}</td><td>[kN]</td></tr>
         <tr class="hl"><th>Tension by Multi-Mode</th><td>${T.multiTonf === null ? "—" : T.multiTonf.toFixed(5)}</td><td>[Tonf]</td></tr>
       </table>
