@@ -7,21 +7,22 @@
    상관
    ============================================================ */
 
-function pairXY(cx, cy) {
+/* X 채널의 구간 [i0,i1) 안에서만 짝을 만든다 */
+function pairXY(cx, cy, i0, i1) {
   if (cx.tableId === cy.tableId) {
-    const n = Math.min(cx.n, cy.n);
-    return { n, xi: i => i, yi: i => i, how: "같은 파일 · 행 번호로 결합" };
+    const end = Math.min(i1, cy.n);
+    return { i0, i1: end, yi: i => i, how: "같은 파일 · 행 번호로 결합" };
   }
-  if (!cx.times || !cy.times) return { n: 0, how: "시간축이 없어 다른 파일끼리 결합할 수 없습니다" };
+  if (!cx.times || !cy.times) return { i0: 0, i1: 0, how: "시간축이 없어 다른 파일끼리 결합할 수 없습니다" };
   const tol = Math.max(1, (cy.times[1] - cy.times[0]) || 1000) * 0.75;
-  const map = new Int32Array(cx.n).fill(-1);
+  const map = new Int32Array(Math.max(0, i1 - i0)).fill(-1);
   let j = 0, hit = 0;
-  for (let i = 0; i < cx.n; i++) {
+  for (let i = i0; i < i1; i++) {
     const t = cx.times[i];
     while (j + 1 < cy.n && Math.abs(cy.times[j + 1] - t) <= Math.abs(cy.times[j] - t)) j++;
-    if (Math.abs(cy.times[j] - t) <= tol) { map[i] = j; hit++; }
+    if (Math.abs(cy.times[j] - t) <= tol) { map[i - i0] = j; hit++; }
   }
-  return { n: cx.n, xi: i => i, yi: i => map[i],
+  return { i0, i1, yi: i => map[i - i0],
            how: `다른 파일 · 시각 최근접 결합 (${hit.toLocaleString()}쌍, 허용 ${fmtDur(tol)})` };
 }
 
@@ -38,19 +39,21 @@ function renderXY(ctx, w, h, th) {
   const norm = $("xyYMode").value === "norm";
   const useFit = $("xyFit").checked, useTimeColor = $("xyTime").checked;
 
+  const [rx0, rx1] = rangeBounds(cx);
   const sets = [], notes = [];
   for (const cy of ys) {
-    const p = pairXY(cx, cy);
+    const p = pairXY(cx, cy, rx0, rx1);
     notes.push(`${cy.name}: ${p.how}`);
-    if (!p.n) { sets.push({ ch: cy, pts: [], r: NaN }); continue; }
-    const stride = Math.max(1, Math.ceil(p.n / 40000));
+    const nUse = p.i1 - p.i0;
+    if (nUse <= 0) { sets.push({ ch: cy, pts: [], r: NaN }); continue; }
+    const stride = Math.max(1, Math.ceil(nUse / 40000));
     const pts = [];
     let sx = 0, sy = 0, sxx = 0, syy = 0, sxy = 0, m = 0;
-    for (let i = 0; i < p.n; i += stride) {
+    for (let i = p.i0; i < p.i1; i += stride) {
       const yj = p.yi(i); if (yj < 0) continue;
-      const a = cx.values[p.xi(i)], b = cy.values[yj];
+      const a = cx.values[i], b = cy.values[yj];
       if (!isFinite(a) || !isFinite(b)) continue;
-      pts.push([a, b, i / p.n]);
+      pts.push([a, b, (i - p.i0) / nUse]);
       sx += a; sy += b; sxx += a * a; syy += b * b; sxy += a * b; m++;
     }
     const den = Math.sqrt((m * sxx - sx * sx) * (m * syy - sy * sy));

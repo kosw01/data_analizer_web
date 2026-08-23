@@ -26,6 +26,35 @@
     <button data-p="ag" aria-selected="false">분석</button>
   </nav>
 
+
+  <!-- 구간 — 시계열·상관·분석 세 화면이 함께 쓴다 -->
+  <div class="card rangebar" id="rangeBar" hidden>
+    <div class="row" style="margin-top:0">
+      <strong style="font-size:14px">기간</strong>
+      <label class="sw"><input type="radio" name="rmode" value="all" checked> 전체</label>
+      <label class="sw"><input type="radio" name="rmode" value="range"> 구간</label>
+      <div class="spacer"></div>
+      <span class="muted" id="rangeInfo"></span>
+    </div>
+    <div class="row" id="rangeFields" hidden>
+      <div class="fld" id="fldT" hidden>
+        <span class="lb">시작 시각</span><input class="box wide" type="datetime-local" step="1" id="rTStart">
+      </div>
+      <div class="fld" id="fldT2" hidden>
+        <span class="lb">끝 시각</span><input class="box wide" type="datetime-local" step="1" id="rTEnd">
+      </div>
+      <div class="fld" id="fldS" hidden>
+        <span class="lb">시작 (초)</span><input class="box sm" type="number" step="0.1" id="rSStart">
+      </div>
+      <div class="fld" id="fldS2" hidden>
+        <span class="lb">끝 (초)</span><input class="box sm" type="number" step="0.1" id="rSEnd">
+      </div>
+      <div class="fld" style="justify-content:flex-end">
+        <button class="b btn-ghost btn-sm" id="rFull">전체로 되돌리기</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== 데이터 ===== -->
   <section data-page="data">
     <div class="card">

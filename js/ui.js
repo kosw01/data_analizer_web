@@ -63,7 +63,7 @@ function renderChannels() {
     el.innerHTML = `
       <span class="dot" style="background:${ch.color}"></span>
       <div class="info"><div class="nm">${ch.name}</div>
-        <div class="src">${ch.source} · ${ch.n.toLocaleString()}점 · ${kind} · ${fmtNum(ch.min, 3)} ~ ${fmtNum(ch.max, 3)}</div></div>
+        <div class="src">${ch.source} · ${ch.n.toLocaleString()}점 · ${kind} · ${fmtNum(ch.min, 3)} ~ ${fmtNum(ch.max, 3)}${ch.nan ? ` · 결측 ${ch.nan.toLocaleString()}개` : ""}</div></div>
       <span class="chip ${p.ok ? "ok" : "bad"}" title="${p.why}">${p.ok ? "FFT·필터 가능" : "FFT·필터 불가"}</span>
       <button class="b btn-ghost btn-sm" data-chdel="${ch.id}">제거</button>`;
     box.appendChild(el);
@@ -94,5 +94,71 @@ function renderSelectors() {
   $("xyY").innerHTML = store.channels.map(c => pickHTML(c, "xyY", ui.xySel.has(c.id), c.id === ui.xyX)).join("");
   $("agPicks").innerHTML = store.channels.map(c => pickHTML(c, "ag", ui.agSel.has(c.id))).join("");
 
+  drawTS(); drawXY(); renderAgg(); renderRangeBar();
+}
+
+/* ============================================================
+   구간 막대 — 세 분석 화면이 공유한다
+   ============================================================ */
+
+/* 등록된 채널들이 어떤 시간 성격인지 (시각 기반 / 인덱스 기반 / 둘 다) */
+function rangeKinds() {
+  return {
+    timed: store.channels.some(c => c.times),
+    indexed: store.channels.some(c => !c.times)
+  };
+}
+
+/* 전체 채널을 아우르는 시각 범위 */
+function fullTimeSpan() {
+  let a = Infinity, b = -Infinity;
+  for (const c of store.channels) {
+    if (!c.times || !c.n) continue;
+    if (c.times[0] < a) a = c.times[0];
+    if (c.times[c.n - 1] > b) b = c.times[c.n - 1];
+  }
+  return isFinite(a) ? [a, b] : null;
+}
+
+function renderRangeBar() {
+  const bar = $("rangeBar");
+  const show = store.channels.length > 0 && ui.page !== "data";
+  bar.hidden = !show;
+  if (!show) return;
+
+  const r = ui.range;
+  const k = rangeKinds();
+  [...document.querySelectorAll('input[name="rmode"]')].forEach(e => e.checked = (e.value === r.mode));
+  $("rangeFields").hidden = r.mode !== "range";
+  $("fldT").hidden = $("fldT2").hidden = !k.timed;
+  $("fldS").hidden = $("fldS2").hidden = !k.indexed;
+
+  if (document.activeElement !== $("rTStart")) $("rTStart").value = toLocalInput(r.tStart);
+  if (document.activeElement !== $("rTEnd")) $("rTEnd").value = toLocalInput(r.tEnd);
+  if (document.activeElement !== $("rSStart")) $("rSStart").value = r.sStart === null ? "" : r.sStart;
+  if (document.activeElement !== $("rSEnd")) $("rSEnd").value = r.sEnd === null ? "" : r.sEnd;
+
+  let info = "";
+  if (r.mode === "all") {
+    const sp = fullTimeSpan();
+    info = sp ? `${fmtTime(sp[0], 1e12)} ~ ${fmtTime(sp[1], 1e12)} 전부` : "전체";
+  } else {
+    const parts = [];
+    if (k.timed && (r.tStart !== null || r.tEnd !== null))
+      parts.push(`${fmtDur((r.tEnd ?? 0) - (r.tStart ?? 0))} 구간`);
+    let used = 0, total = 0;
+    for (const c of store.channels) {
+      const [i0, i1] = rangeBounds(c);
+      used += i1 - i0; total += c.n;
+    }
+    parts.push(`${used.toLocaleString()} / ${total.toLocaleString()}점`);
+    info = `<span class="on">${parts.join(" · ")}</span>`;
+  }
+  $("rangeInfo").innerHTML = info;
+}
+
+/* 구간이 바뀌면 세 화면을 함께 다시 그린다 */
+function applyRange() {
+  renderRangeBar();
   drawTS(); drawXY(); renderAgg();
 }

@@ -23,8 +23,9 @@ function bucketKey(ms, unit) {
 
 function aggregate(ch, unit) {
   if (!ch.times) return null;
+  const [i0, i1] = rangeBounds(ch);
   const map = new Map();
-  for (let i = 0; i < ch.n; i++) {
+  for (let i = i0; i < i1; i++) {
     const v = ch.values[i];
     if (!isFinite(v)) continue;
     const k = bucketKey(ch.times[i], unit);

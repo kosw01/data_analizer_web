@@ -128,3 +128,10 @@
   thead th:first-child { z-index:3; }
   tbody tr:hover td { background:var(--chipBg); }
   @media (prefers-reduced-motion: reduce) { * { transition:none !important; } }
+
+/* 구간 막대 */
+.rangebar { padding:14px 20px; position:sticky; top:0; z-index:5; border:1px solid var(--divider); }
+.rangebar .fld { flex-direction:column; }
+input.box.wide { width:210px; }
+canvas#tsCv { cursor:crosshair; touch-action:pan-y; }
+.rangebar .on { background:var(--lightBg); color:var(--deep); border-radius:12px; padding:5px 10px; font-weight:700; font-size:12.5px; }

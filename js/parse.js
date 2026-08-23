@@ -36,6 +36,17 @@ function parseDateTime(s) {
   const t = new Date(+m[1], +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0), +(m[6] || 0), ms).getTime();
   return isNaN(t) ? NaN : t;
 }
+/* 빈칸·공백·NA 표기는 결측으로 본다. Number(" ")가 0이 되는 구멍을 막는다 */
+const NA_WORDS = new Set(["", "na", "n/a", "nan", "null", "none", "-", "--"]);
+function toNum(v) {
+  if (typeof v === "number") return v;
+  if (v === undefined || v === null) return NaN;
+  const s = String(v).trim();
+  if (NA_WORDS.has(s.toLowerCase())) return NaN;
+  const n = Number(s);
+  return isFinite(n) ? n : NaN;
+}
+
 const isNumeric = s => s !== null && s !== undefined && String(s).trim() !== "" && isFinite(Number(s));
 const looksLikeHeader = cells => cells.some(c => !isNumeric(c) && isNaN(parseDateTime(c)));
 
@@ -75,8 +86,7 @@ async function parseDelimited(text, fileName, onProgress) {
     const parts = text.slice(a, b).split(delim);
     if (timeIsFirstCol) times[r] = parseDateTime(parts[0]);
     for (let c = 0; c < nCols; c++) {
-      const v = parts[c];
-      cols[c][r] = (v === undefined || v === "") ? NaN : Number(v);
+      cols[c][r] = toNum(parts[c]);
     }
     if ((r & 8191) === 0) { onProgress(r / nRows); await yieldTick(); }
   }
@@ -105,8 +115,7 @@ async function parseXlsx(buf, fileName, onProgress) {
     const row = rows[r + dataStart];
     if (timeIsFirstCol) { const v = row[0]; times[r] = v instanceof Date ? v.getTime() : parseDateTime(String(v ?? "")); }
     for (let c = 0; c < nCols; c++) {
-      const v = row[c];
-      cols[c][r] = typeof v === "number" ? v : ((v === undefined || v === "") ? NaN : Number(v));
+      cols[c][r] = toNum(row[c]);
     }
     if ((r & 8191) === 0) { onProgress(0.5 + 0.5 * r / nRows); await yieldTick(); }
   }
@@ -125,7 +134,7 @@ async function parseJson(text, fileName) {
   for (let r = 0; r < nRows; r++) for (let c = 0; c < nCols; c++) {
     const v = recs[r][names[c]];
     if (c === 0 && timeIsFirstCol) times[r] = parseDateTime(String(v));
-    cols[c][r] = typeof v === "number" ? v : Number(v);
+    cols[c][r] = toNum(v);
   }
   return buildTable({ fileName, names, cols, times, timeIsFirstCol, nRows, hasHeader: true, delimName: "JSON" });
 }

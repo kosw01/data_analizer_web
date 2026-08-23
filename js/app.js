@@ -52,6 +52,7 @@ $("tabs").addEventListener("click", e => {
   ui.page = b.dataset.p;
   [...$("tabs").children].forEach(x => x.setAttribute("aria-selected", x === b));
   document.querySelectorAll("section[data-page]").forEach(s => s.hidden = s.dataset.page !== ui.page);
+  renderRangeBar();
   if (ui.page === "ts") drawTS();
   if (ui.page === "xy") drawXY();
   if (ui.page === "ag") renderAgg();
@@ -127,9 +128,72 @@ $("agCsv").onclick = exportCsv;
 $("reset").onclick = () => {
   store.tables = []; store.channels = [];
   ui.tsSel.clear(); ui.xySel.clear(); ui.agSel.clear(); ui.xyX = null;
-  renderFiles(); renderChannels();
+  ui.range = { mode: "all", tStart: null, tEnd: null, sStart: null, sEnd: null };
+  renderFiles(); renderChannels(); renderRangeBar();
 };
 
 let rt;
 window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { drawTS(); drawXY(); }, 120); });
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { drawTS(); drawXY(); });
+
+/* ============================================================
+   구간 조작
+   ============================================================ */
+
+document.querySelectorAll('input[name="rmode"]').forEach(e => e.onchange = () => {
+  ui.range.mode = e.value;
+  applyRange();
+});
+
+$("rFull").onclick = () => {
+  ui.range = { mode: "all", tStart: null, tEnd: null, sStart: null, sEnd: null };
+  applyRange();
+};
+
+$("rTStart").oninput = () => { ui.range.tStart = fromLocalInput($("rTStart").value); applyRange(); };
+$("rTEnd").oninput   = () => { ui.range.tEnd   = fromLocalInput($("rTEnd").value);   applyRange(); };
+$("rSStart").oninput = () => { ui.range.sStart = numOrNull($("rSStart").value); applyRange(); };
+$("rSEnd").oninput   = () => { ui.range.sEnd   = numOrNull($("rSEnd").value);   applyRange(); };
+
+/* 시계열 그래프를 좌우로 끌어 구간 잡기 */
+(() => {
+  const cv = $("tsCv");
+  const localX = e => e.clientX - cv.getBoundingClientRect().left;
+
+  cv.addEventListener("pointerdown", e => {
+    if (!tsBox) return;
+    const x = localX(e);
+    if (x < tsBox.L || x > tsBox.L + tsBox.pw) return;
+    cv.setPointerCapture(e.pointerId);
+    tsDrag = { x0: x, x1: x };
+    drawTS();
+  });
+
+  cv.addEventListener("pointermove", e => {
+    if (!tsDrag) return;
+    tsDrag.x1 = Math.max(tsBox.L, Math.min(tsBox.L + tsBox.pw, localX(e)));
+    drawTS();
+  });
+
+  const finish = () => {
+    if (!tsDrag || !tsBox) { tsDrag = null; return; }
+    const a = Math.min(tsDrag.x0, tsDrag.x1), b = Math.max(tsDrag.x0, tsDrag.x1);
+    const box = tsBox;
+    tsDrag = null;
+    /* 손이 미끄러진 정도(6px 미만)는 선택으로 보지 않는다 */
+    if (b - a < 6) { drawTS(); return; }
+    const v0 = tsPxToVal(a), v1 = tsPxToVal(b);
+    if (box.allTimed) { ui.range.tStart = v0; ui.range.tEnd = v1; }
+    else { ui.range.sStart = +(v0 / 1000).toFixed(3); ui.range.sEnd = +(v1 / 1000).toFixed(3); }
+    ui.range.mode = "range";
+    applyRange();
+  };
+  cv.addEventListener("pointerup", finish);
+  cv.addEventListener("pointercancel", () => { tsDrag = null; drawTS(); });
+
+  /* 더블클릭하면 전체로 돌아간다 */
+  cv.addEventListener("dblclick", () => {
+    ui.range = { mode: "all", tStart: null, tEnd: null, sStart: null, sEnd: null };
+    applyRange();
+  });
+})();

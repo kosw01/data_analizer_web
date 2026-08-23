@@ -47,3 +47,16 @@ function downloadBlob(blob, filename) {
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+
+/* ---- datetime-local 입력값 ↔ epoch ms ---- */
+function toLocalInput(ms) {
+  if (ms === null || !isFinite(ms)) return "";
+  const d = new Date(ms), p = n => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+function fromLocalInput(s) {
+  if (!s) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/.exec(s);
+  if (!m) return null;
+  return new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0)).getTime();
+}
