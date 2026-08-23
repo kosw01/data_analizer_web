@@ -271,6 +271,72 @@ function renderCable(ctx, w, h, th) {
   return true;
 }
 
+/* ---- 세로 스펙트럼 ----
+   주파수를 위에서 아래로 흐르게 해서 차수 표(1차가 맨 위)와 나란히 읽히게 한다.
+   drawFrame 은 축을 값으로만 다루므로 x에 진폭, y에 주파수를 넣으면 그대로 쓰인다 */
+
+function renderCableVertical(ctx, w, h, th) {
+  if (th.bg) { ctx.fillStyle = th.bg; ctx.fillRect(0, 0, w, h); }
+  const R0 = cbResult;
+  if (!R0) return null;
+  const { sp, peaks, ch, fMax } = R0;
+  const { freq, amp } = sp;
+  const kmax = Math.max(2, Math.min(amp.length - 1, Math.ceil(fMax / sp.df)));
+  const kmin = Math.max(1, Math.ceil(R0.fMin / sp.df));
+
+  let hi = 0;
+  for (let k = kmin; k <= kmax; k++) if (amp[k] > hi) hi = amp[k];
+  if (!(hi > 0)) hi = 1;
+  hi *= 1.16;
+
+  const fLo = freq[kmin], fHi = fMax;
+  const L = 52, Rr = 12, T = 12, B = 40;
+  const pw = w - L - Rr, ph = h - T - B;
+  const px = a => L + a / hi * pw;
+  const py = f => T + (f - fLo) / ((fHi - fLo) || 1) * ph;    // 아래로 갈수록 고주파
+
+  drawFrame(ctx, { L, T, pw, ph, px, py },
+    niceTicks(0, hi, 3).map(v => [v, fmtNum(v, 2)]),
+    niceTicks(fLo, fHi, 10).map(v => [v, fmtNum(v, 2)]),
+    "진폭", "주파수 (Hz)", "", th, true);
+
+  ctx.save(); ctx.beginPath(); ctx.rect(L, T, pw, ph); ctx.clip();
+
+  for (const r of usedModes()) {
+    if (r.f > fHi || r.f < fLo) continue;
+    const Y = py(r.f);
+    ctx.strokeStyle = th.textDim; ctx.setLineDash([3, 4]); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(L, Y); ctx.lineTo(L + pw, Y); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = th.textDim; ctx.font = "700 10px -apple-system,sans-serif";
+    ctx.textAlign = "left"; ctx.textBaseline = "bottom";
+    ctx.fillText(r.n, L + 3, Y - 2);
+  }
+
+  ctx.strokeStyle = ch.color; ctx.lineWidth = 1.1; ctx.lineJoin = "round";
+  ctx.beginPath();
+  const stride = Math.max(1, Math.floor((kmax - kmin) / (ph * 3)));
+  let started = false;
+  for (let k = kmin; k <= kmax; k += stride) {
+    const X = px(amp[k]), Y = py(freq[k]);
+    if (!started) { ctx.moveTo(X, Y); started = true; } else ctx.lineTo(X, Y);
+  }
+  ctx.stroke();
+
+  ctx.font = "700 10px -apple-system,sans-serif";
+  ctx.textAlign = "left"; ctx.textBaseline = "middle";
+  for (const p of peaks) {
+    if (p.freq > fHi || p.freq < fLo) continue;
+    const X = px(p.amp), Y = py(p.freq);
+    ctx.fillStyle = ch.color;
+    ctx.beginPath(); ctx.arc(X, Y, 2.5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = th.textNormal;
+    ctx.fillText(p.freq.toFixed(3), Math.min(X + 5, L + pw - 34), Y);
+  }
+  ctx.restore();
+  return true;
+}
+
 /* ---- 회귀 그래프: (fn/n)² 대 n² ---- */
 
 function renderRegression(ctx, w, h, th, res) {
@@ -423,6 +489,16 @@ function snapshot(renderFn, ratio, extra) {
   return off.toDataURL("image/png");
 }
 
+/* 크기를 직접 정해 그린다. 보고서 칸 모양에 맞춰야 해서 비율만으로는 부족하다 */
+function snapshotSize(renderFn, w, h, extra) {
+  const off = document.createElement("canvas");
+  off.width = w * 2; off.height = h * 2;
+  const ctx = off.getContext("2d");
+  ctx.setTransform(2, 0, 0, 2, 0, 0);
+  renderFn(ctx, w, h, { ...LIGHT }, extra);
+  return off.toDataURL("image/png");
+}
+
 function addCableResult() {
   const R0 = cbResult;
   if (!R0 || !R0.T) return;
@@ -432,8 +508,8 @@ function addCableResult() {
     source: R0.ch.source,
     mIn: R0.mIn, unitLabel: R0.unit.label, mTon: R0.mTon, L: R0.L,
     T: R0.T,
-    spectrumPng: snapshot(renderCable, ui.cfg.cb.ratio),
-    regPng: snapshot(renderRegression, "2:1", R0.T)
+    verticalPng: snapshotSize(renderCableVertical, 300, 780),
+    regPng: snapshotSize(renderRegression, 720, 300, R0.T)
   });
   $("cbName").value = "";
   renderCableList();
@@ -508,41 +584,53 @@ function renderReport() {
           <div class="rp-t2">by Vibration Method</div>
         </div>
         <table class="rp-id">
-          <tr><th>Bridge</th><td>${r.bridge || "—"}</td><th>유효길이</th><td>${r.L} m</td></tr>
-          <tr><th>Cable No.</th><td>${r.name}</td><th>단위질량</th><td>${r.mIn} ${r.unitLabel}</td></tr>
+          <tr><th>Bridge</th><td>${r.bridge || "—"}</td><th>Leff</th><td>${r.L} m</td></tr>
+          <tr><th>Cable No.</th><td>${r.name}</td><th>m</th><td>${r.mIn} ${r.unitLabel}</td></tr>
         </table>
       </div>
 
-      <h3>□ Cable Properties</h3>
-      <table class="rp-kv">
-        <tr><th>w (weight per unit length)</th><td>${T.w === null ? "—" : T.w.toFixed(5)}</td><td>[kN/m]</td></tr>
-        <tr><th>m (mass per unit length)</th><td>${r.mTon === null ? "—" : r.mTon.toFixed(5)}</td><td>[ton/m]</td></tr>
-        <tr><th>Leff (effective length)</th><td>${r.L}</td><td>[m]</td></tr>
-      </table>
-
-      <h3>□ Vibration Method</h3>
-      <table class="rp-tbl">
-        <thead><tr><th>n</th><th>fn [Hz]</th><th>n²</th><th>(fn/n)²</th><th>T [kN]</th></tr></thead>
-        <tbody>${T.rows.map(x =>
-          `<tr><td>${x.n}</td><td>${x.f.toFixed(5)}</td><td>${x.n2}</td><td>${x.y.toFixed(5)}</td><td>${x.T === null ? "—" : x.T.toFixed(5)}</td></tr>`
-        ).join("")}</tbody>
-      </table>
-
-      <h3>□ Estimation for Cable Tension</h3>
-      <table class="rp-kv">
-        <tr><th>y-Intercept</th><td>${T.intercept === null ? "—" : T.intercept.toFixed(5)}</td><td></td></tr>
-        <tr><th>Slope</th><td>${T.slope === null ? "—" : T.slope.toExponential(5)}</td><td></td></tr>
-        <tr><th>Correlation Coefficient</th><td>${T.corr === null ? "—" : T.corr.toFixed(5)}</td><td></td></tr>
-        <tr><th>Flexural Rigidity for Cable</th><td>${T.EI === null ? "—" : T.EI.toFixed(5)}</td><td>[kN·m²]</td></tr>
-        <tr class="hl"><th>Tension by Single Mode</th><td>${T.single === null ? "—" : T.single.toFixed(5)}</td><td>[kN]</td></tr>
-        <tr class="hl"><th>Tension by Multi-Mode</th><td>${T.multi === null ? "—" : T.multi.toFixed(5)}</td><td>[kN]</td></tr>
-        <tr class="hl"><th>Tension by Multi-Mode</th><td>${T.multiTonf === null ? "—" : T.multiTonf.toFixed(5)}</td><td>[Tonf]</td></tr>
-      </table>
-
-      <div class="rp-figs">
-        <figure><img src="${r.spectrumPng}" alt="스펙트럼"><figcaption>FFT 스펙트럼 · 사용 차수 표시</figcaption></figure>
-        <figure><img src="${r.regPng}" alt="회귀"><figcaption>(fn/n)² – n² 회귀</figcaption></figure>
+      <div class="rp-props">
+        <span><b>w</b> ${T.w === null ? "—" : T.w.toFixed(5)} kN/m</span>
+        <span><b>m</b> ${r.mTon === null ? "—" : r.mTon.toFixed(5)} ton/m</span>
+        <span><b>Leff</b> ${r.L} m</span>
+        <span><b>사용 차수</b> ${T.count}개</span>
       </div>
+
+      <div class="rp-cols">
+        <div class="rp-left">
+          <h3>□ Vibration Method</h3>
+          <table class="rp-tbl">
+            <thead><tr><th>n</th><th>fn [Hz]</th><th>n²</th><th>(fn/n)²</th><th>T [kN]</th></tr></thead>
+            <tbody>${T.rows.map(x =>
+              `<tr><td>${x.n}</td><td>${x.f.toFixed(4)}</td><td>${x.n2}</td><td>${x.y.toFixed(5)}</td><td>${x.T === null ? "—" : x.T.toFixed(2)}</td></tr>`
+            ).join("")}</tbody>
+          </table>
+        </div>
+        <figure class="rp-right">
+          <img src="${r.verticalPng}" alt="스펙트럼">
+          <figcaption>FFT 스펙트럼 · 사용 차수 표시</figcaption>
+        </figure>
+      </div>
+
+      <div class="rp-cols rp-bottom">
+        <div class="rp-left">
+          <h3>□ Estimation for Cable Tension</h3>
+          <table class="rp-kv">
+            <tr><th>y-Intercept</th><td>${T.intercept === null ? "—" : T.intercept.toFixed(5)}</td><td></td></tr>
+            <tr><th>Slope</th><td>${T.slope === null ? "—" : T.slope.toExponential(5)}</td><td></td></tr>
+            <tr><th>Correlation Coefficient</th><td>${T.corr === null ? "—" : T.corr.toFixed(5)}</td><td></td></tr>
+            <tr><th>Flexural Rigidity</th><td>${T.EI === null ? "—" : T.EI.toFixed(3)}</td><td>[kN·m²]</td></tr>
+            <tr class="hl"><th>Tension by Single Mode</th><td>${T.single === null ? "—" : T.single.toFixed(3)}</td><td>[kN]</td></tr>
+            <tr class="hl"><th>Tension by Multi-Mode</th><td>${T.multi === null ? "—" : T.multi.toFixed(3)}</td><td>[kN]</td></tr>
+            <tr class="hl"><th>Tension by Multi-Mode</th><td>${T.multiTonf === null ? "—" : T.multiTonf.toFixed(3)}</td><td>[Tonf]</td></tr>
+          </table>
+        </div>
+        <figure class="rp-right2">
+          <img src="${r.regPng}" alt="회귀">
+          <figcaption>(fn/n)² – n² 회귀</figcaption>
+        </figure>
+      </div>
+
       <div class="rp-foot">${r.source} · 작성 ${stamp}</div>
     </article>`;
   }).join("");
