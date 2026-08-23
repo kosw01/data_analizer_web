@@ -112,7 +112,7 @@ document.addEventListener("input", e => {
   const key = e.target.dataset.cfg; if (!key) return;
   const [kind, field] = key.split(".");
   const v = e.target.type === "checkbox" ? e.target.checked : e.target.value;
-  const NUMERIC = ["lineWidth", "dot", "lowCut", "highCut", "fMin", "fMax", "minSep"];
+  const NUMERIC = ["lineWidth", "dot", "lowCut", "highCut", "fMin", "fMax", "minSep", "skip"];
   ui.cfg[kind][field] = NUMERIC.includes(field) ? (parseFloat(v) || ui.cfg[kind][field]) : v;
   redraw(kind);
 });
@@ -268,7 +268,8 @@ document.addEventListener("change", e => {
 $("cbN").onchange    = e => { ui.cfg.cb.N = +e.target.value; drawCable(); };
 $("cbUnit").onchange = e => { ui.cfg.cb.massUnit = e.target.value; drawCable(); };
 $("cbBridge").oninput = () => {};
-$("cbRefill").onclick = () => { cbModesKey = ""; drawCable(); };
+$("cbRefill").onclick = () => { ui.cfg.cb.f1Manual = ""; cbModesKey = ""; drawCable(); };
+$("cbFill").onclick   = () => refillModes(numOrNull(ui.cfg.cb.f1Manual));
 $("cbPrint").onclick  = () => window.print();
 
 /* 차수 표 편집 */

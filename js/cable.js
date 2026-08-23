@@ -68,20 +68,59 @@ function cbChannel() {
   return canProcess(ch).ok ? ch : null;
 }
 
-/* 검출한 봉우리를 차수 칸에 자동으로 채운다. 이후 사람이 켜고 끈다 */
-function autoFillModes(peaks, f1) {
+/* 차수 칸 채우기.
+
+   고차로 갈수록 실제 진동수는 f1의 정수배보다 조금씩 커진다(휨강성 때문).
+   그래서 딱 n×f1 자리를 찾으면 고차에서 빗나간다.
+   이미 맞춘 차수들로 (fn/n)² = a + b·n² 를 세워 다음 차수를 예측한 뒤,
+   그 근처에 실제 봉우리가 있으면 그 값을 넣고 켠다. 없으면 예측값만 넣고 끈다. */
+function fillModes(f1, peaks, df) {
   const rows = [];
+  const got = [];                                  // 지금까지 맞춘 {n, f}
+  const win0 = Math.max((df || 0.01) * 5, f1 * 0.07);
+
   for (let n = 1; n <= MODE_ROWS; n++) {
-    let hit = null, best = Infinity;
-    if (f1 > 0) {
-      for (const p of peaks) {
-        const d = Math.abs(p.freq - n * f1);
-        if (d < best && d < f1 * 0.12) { best = d; hit = p.freq; }
+    let pred = n * f1;
+    if (got.length >= 2) {
+      /* (fn/n)² 를 n² 에 회귀해 다음 자리를 내다본다 */
+      let sx = 0, sy = 0, sxx = 0, sxy = 0;
+      for (const g of got) {
+        const x = g.n * g.n, y = (g.f / g.n) * (g.f / g.n);
+        sx += x; sy += y; sxx += x * x; sxy += x * y;
       }
+      const m = got.length, den = m * sxx - sx * sx;
+      if (den !== 0) {
+        const b = (m * sxy - sx * sy) / den;
+        const a = (sy - b * sx) / m;
+        const yy = a + b * n * n;
+        if (yy > 0) pred = n * Math.sqrt(yy);
+      }
+    } else if (got.length === 1) {
+      pred = n * (got[0].f / got[0].n);
     }
-    rows.push({ n, f: hit === null ? "" : +hit.toFixed(4), use: hit !== null });
+
+    const win = win0 * (1 + 0.05 * n);             // 고차일수록 조금 넉넉하게
+    let hit = null, best = Infinity;
+    for (const p of peaks) {
+      const d = Math.abs(p.freq - pred);
+      if (d < best && d <= win) { best = d; hit = p.freq; }
+    }
+    if (hit !== null) {
+      rows.push({ n, f: +hit.toFixed(4), use: true });
+      got.push({ n, f: hit });
+    } else {
+      rows.push({ n, f: +pred.toFixed(4), use: false });
+    }
   }
   ui.cbModes = rows;
+}
+
+/* "이 값으로 차수 채우기" 버튼이 부른다 */
+function refillModes(f1) {
+  const R0 = cbResult;
+  if (!R0 || !(f1 > 0)) return;
+  fillModes(f1, R0.peaks, R0.sp.df);
+  drawCable();
 }
 
 function usedModes() {
@@ -116,7 +155,7 @@ function computeCable() {
   if (!sp) return null;
   if (n < N) notes.push(`구간이 ${n.toLocaleString()}점이라 윈도우 ${N.toLocaleString()}보다 짧습니다`);
 
-  const peaks = findPeaks(sp, 20, cfg.win, {
+  const peaks = findPeaks(sp, 30, cfg.win, {
     fMin, fMax, minSep: Math.max(sp.df * 4, +cfg.minSep || 0.1), prominence: 1.4
   });
   const est = estimateFundamental(peaks);
@@ -126,7 +165,8 @@ function computeCable() {
   const key = [ui.cbX, ui.range.mode, ui.range.tStart, ui.range.tEnd,
                ui.range.sStart, ui.range.sEnd, N, cfg.win, fMin, fMax, cfg.minSep].join("|");
   if (key !== cbModesKey || !ui.cbModes || !ui.cbModes.length) {
-    autoFillModes(peaks, est ? est.f1 : 0);
+    const seed = numOrNull(cfg.f1Manual) > 0 ? numOrNull(cfg.f1Manual) : (est ? est.f1 : 0);
+    if (seed > 0) fillModes(seed, peaks, sp.df); else ui.cbModes = [];
     cbModesKey = key;
   }
 

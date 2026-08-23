@@ -44,15 +44,15 @@ function computeSP() {
 
   /* 봉우리는 화면에 보이는 주파수 범위 안에서만 찾는다.
      그러지 않으면 나이퀴스트 근처 잡음이 목록을 다 차지한다 */
+  /* FFT 앞쪽 몇 개 빈은 DC 잔여와 창함수 누설로 값이 크게 나온다.
+     그대로 두면 Y축이 그쪽에 눌려 정작 보려는 봉우리가 바닥에 붙는다 */
   let peaks = [];
   if (sp) {
+    const skip = Math.max(1, Math.min(+cfg.skip || 0, sp.amp.length - 4));
+    const fLo = skip * sp.df;
     const fu = numOrNull(cfg.fmax);
-    const fmax = fu !== null && fu > 0 ? Math.min(fu, sp.nyquist) : sp.nyquist;
-    peaks = findPeaks(sp, 5, cfg.win).filter(p => p.freq <= fmax).slice(0, 5);
-    if (!peaks.length) {
-      const kmax = Math.min(sp.amp.length - 1, Math.ceil(fmax / sp.df));
-      peaks = findPeaks({ freq: sp.freq.slice(0, kmax + 1), amp: sp.amp.slice(0, kmax + 1), df: sp.df }, 5, cfg.win);
-    }
+    const fHi = fu !== null && fu > 0 ? Math.min(fu, sp.nyquist) : sp.nyquist;
+    peaks = findPeaks(sp, 5, cfg.win, { fMin: fLo, fMax: fHi });
   }
 
   spResult = {
@@ -132,10 +132,13 @@ function renderSPFreq(ctx, w, h, th) {
   const fmaxUser = numOrNull(cfg.fmax);
   const fmax = fmaxUser !== null && fmaxUser > 0 ? Math.min(fmaxUser, sp.nyquist) : sp.nyquist;
   const kmax = Math.max(2, Math.min(amp.length - 1, Math.ceil(fmax / sp.df)));
+  /* 앞쪽 빈은 축 범위 계산에서도 빼야 한다. 그리기만 빼면 Y축이 그대로 눌린다 */
+  const kmin = Math.max(1, Math.min(+cfg.skip || 1, kmax - 2));
+  const fmin = kmin * sp.df;
 
   const log = cfg.log;
   let ymax = -Infinity, ymin = Infinity;
-  for (let k = 1; k <= kmax; k++) {
+  for (let k = kmin; k <= kmax; k++) {
     if (amp[k] > ymax) ymax = amp[k];
     if (amp[k] > 0 && amp[k] < ymin) ymin = amp[k];
   }
@@ -148,7 +151,7 @@ function renderSPFreq(ctx, w, h, th) {
 
   const L = 78, Rr = 18, T = cfg.sTitle ? 36 : 16, B = 46;
   const pw = w - L - Rr, ph = h - T - B;
-  const px = f => L + f / fmax * pw;
+  const px = f => L + (f - fmin) / ((fmax - fmin) || 1) * pw;
   const py = v => T + (1 - (yv(v) - lo) / ((hi - lo) || 1)) * ph;
 
   const yticks = log
@@ -163,16 +166,16 @@ function renderSPFreq(ctx, w, h, th) {
     : niceTicks(0, hi, 5).map(v => [v, fmtNum(v, 3)]);
 
   drawFrame(ctx, { L, T, pw, ph, px: f => px(f), py },
-    niceTicks(0, fmax, Math.max(3, Math.floor(pw / 90))).map(v => [v, fmtNum(v, 3)]),
+    niceTicks(fmin, fmax, Math.max(3, Math.floor(pw / 90))).map(v => [v, fmtNum(v, 3)]),
     yticks, "주파수 (Hz)", log ? "진폭 (로그)" : "진폭", cfg.sTitle, th, cfg.grid);
 
   ctx.save(); ctx.beginPath(); ctx.rect(L, T, pw, ph); ctx.clip();
   ctx.strokeStyle = ch.color; ctx.lineWidth = 1.3;
   ctx.lineJoin = "round";
   ctx.beginPath();
-  const stride = Math.max(1, Math.floor(kmax / (pw * 3)));
+  const stride = Math.max(1, Math.floor((kmax - kmin) / (pw * 3)));
   let started = false;
-  for (let k = 1; k <= kmax; k += stride) {
+  for (let k = kmin; k <= kmax; k += stride) {
     const X = px(freq[k]), Y = py(amp[k]);
     if (!started) { ctx.moveTo(X, Y); started = true; } else ctx.lineTo(X, Y);
   }
@@ -182,7 +185,7 @@ function renderSPFreq(ctx, w, h, th) {
   ctx.font = "700 11px -apple-system,sans-serif";
   ctx.textAlign = "center"; ctx.textBaseline = "bottom";
   for (const p of peaks) {
-    if (p.freq > fmax) continue;
+    if (p.freq > fmax || p.freq < fmin) continue;
     const X = px(p.freq), Y = py(p.amp);
     ctx.fillStyle = ch.color;
     ctx.beginPath(); ctx.arc(X, Y, 3, 0, Math.PI * 2); ctx.fill();
@@ -190,7 +193,7 @@ function renderSPFreq(ctx, w, h, th) {
     ctx.fillText(fmtHz(p.freq), Math.max(L + 24, Math.min(L + pw - 24, X)), Y - 6);
   }
   ctx.restore();
-  return { fmax, kmax };
+  return { fmin, fmax, kmin, kmax };
 }
 
 function drawSP() {
@@ -218,8 +221,10 @@ function renderSPInfo() {
       peaks.map((p, i) => `<tr><td>${i + 1}</td><td>${fmtHz(p.freq)}</td><td>${p.freq > 0 ? fmtNum(1 / p.freq, 4) + " s" : "—"}</td><td>${fmtNum(p.amp, 5)}</td></tr>`).join("") +
       `</tbody>`
     : "";
+  const skip = Math.max(1, +ui.cfg.sp.skip || 1);
   note.innerHTML = [
     `샘플레이트 ${fmtHz(fs)} · 나이퀴스트 ${fmtHz(sp.nyquist)} · 분해능 ${fmtHz(sp.df)}`,
+    `앞쪽 ${skip}개 빈 제외 (${fmtHz(skip * sp.df)} 미만은 표시·탐색에서 뺍니다)`,
     `구간 ${n.toLocaleString()}점 · 평균 조각 ${sp.segments}개 · 계산 ${ms.toFixed(0)}ms`,
     ...R0.notes
   ].join("<br>");
