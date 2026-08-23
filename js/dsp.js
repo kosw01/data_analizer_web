@@ -308,9 +308,25 @@ function scoreFundamental(sortedFreqs, f1, MAXN) {
   const err = bestRun.reduce((a, k) => a + bestPerOrder.get(k), 0) / matched;
   const extras = all.length - matched;
   const lowBonus = bestRun[0] === 1 ? 0.6 : (bestRun[0] === 2 ? 0.25 : 0);
+
+  /* 연속 차수들로 f1을 최소제곱으로 다시 맞춘다.
+     봉우리 하나를 차수로 나눈 값보다 정확하고, 높은 차수일수록 무게가 실린다 */
+  let sNF = 0, sNN = 0;
+  for (const k of bestRun) {
+    const target = k * f1;
+    let closest = null, best = Infinity;
+    for (const f of sortedFreqs) {
+      const dd = Math.abs(f - target);
+      if (dd < best) { best = dd; closest = f; }
+    }
+    sNF += k * closest; sNN += k * k;
+  }
+  const refined = sNN ? sNF / sNN : f1;
+
   return {
-    f1, matched, orders: bestRun, allOrders: all, meanErr: err,
-    score: matched - 4 * err + 0.1 * extras + lowBonus,
+    f1: refined, seed: f1, matched, orders: bestRun, allOrders: all, meanErr: err,
+    /* 오차를 무겁게 본다. 느슨하게 맞은 봉우리가 개수로 점수를 뒤집던 문제가 있었다 */
+    score: matched - 8 * err + 0.05 * extras + lowBonus,
     extrapolated: bestRun[0] > 2
   };
 }
