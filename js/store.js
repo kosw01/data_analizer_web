@@ -26,15 +26,20 @@ function newLimits() {
 const ui = {
   page: "data", tsSel: new Set(), xyX: null, xySel: new Set(), agSel: new Set(),
   range: { mode: "all", tStart: null, tEnd: null, sStart: null, sEnd: null },
-  spX: null,
+  spX: null, cbX: null, cbList: [], rangeOpen: false,
   cfg: {
-    ts: { title:"", xLabel:"", yLabel:"", yMin:"", yMax:"", lineWidth:1.4, height:430, grid:true, limits: newLimits() },
-    xy: { title:"", xLabel:"", yLabel:"", yMin:"", yMax:"", dot:2.2, height:470, grid:true, limits: newLimits() },
+    ts: { title:"", xLabel:"", yLabel:"", yMin:"", yMax:"", lineWidth:1.4, ratio:"4:3", grid:true, limits: newLimits() },
+    xy: { title:"", xLabel:"", yLabel:"", yMin:"", yMax:"", dot:2.2, ratio:"4:3", grid:true, limits: newLimits() },
     sp: {
       zero:"none", filter:"none", lowCut:10, highCut:1,
       N:4096, win:"hann", welch:true, log:false, fmax:"",
-      showRaw:true, height:300, sheight:320,
+      showRaw:true, ratio:"2:1", sRatio:"4:3",
       title:"", sTitle:"", grid:true, limits: newLimits()
+    },
+    cb: {
+      m:"", L:"", fMin:0.4, fMax:20, minSep:0.1,
+      N:16384, win:"hann", f1Manual:"",
+      title:"", ratio:"4:3", grid:true
     }
   }
 };

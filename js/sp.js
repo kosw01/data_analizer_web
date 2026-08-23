@@ -196,9 +196,9 @@ function renderSPFreq(ctx, w, h, th) {
 function drawSP() {
   if ($("spPlotCard").hidden) return;
   computeSP();
-  const a = setupCanvas($("spCv"), ui.cfg.sp.height);
+  const a = setupCanvas($("spCv"), plotHeight($("spCv"), ui.cfg.sp.ratio));
   renderSPTime(a.ctx, a.w, a.h, themeNow());
-  const b = setupCanvas($("spFCv"), ui.cfg.sp.sheight);
+  const b = setupCanvas($("spFCv"), plotHeight($("spFCv"), ui.cfg.sp.sRatio));
   renderSPFreq(b.ctx, b.w, b.h, themeNow());
   renderSPInfo();
 }
@@ -240,7 +240,7 @@ function saveSpPng(which) {
   const cfg = ui.cfg.sp;
   const isTime = which === "time";
   const src = $(isTime ? "spCv" : "spFCv");
-  const w = src.clientWidth || 800, h = isTime ? cfg.height : cfg.sheight, scale = 2;
+  const w = src.clientWidth || 800, h = plotHeight(src, isTime ? cfg.ratio : cfg.sRatio), scale = 2;
   const off = document.createElement("canvas");
   off.width = w * scale; off.height = h * scale;
   const ctx = off.getContext("2d");

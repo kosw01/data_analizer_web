@@ -128,7 +128,7 @@ function renderXY(ctx, w, h, th) {
 function drawXY() {
   if ($("xyPlotCard").hidden) return;
   const t0 = performance.now();
-  const { ctx, w, h } = setupCanvas($("xyCv"), ui.cfg.xy.height);
+  const { ctx, w, h } = setupCanvas($("xyCv"), plotHeight($("xyCv"), ui.cfg.xy.ratio));
   const r = renderXY(ctx, w, h, themeNow());
   $("xyStat").innerHTML = ""; $("xyNote").innerHTML = "";
   if (!r) return;

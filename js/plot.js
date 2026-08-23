@@ -144,7 +144,7 @@ const numOrNull = v => (v === "" || v === null || v === undefined || !isFinite(N
 function savePng(kind) {
   const cfg = ui.cfg[kind];
   const src = $(kind + "Cv");
-  const w = src.clientWidth || 800, h = cfg.height, scale = 2;
+  const w = src.clientWidth || 800, h = plotHeight(src, cfg.ratio), scale = 2;
   const off = document.createElement("canvas");
   off.width = w * scale; off.height = h * scale;
   const ctx = off.getContext("2d");
@@ -199,4 +199,14 @@ function expandForLimits(ymin, ymax, limits) {
   if (lo === ymin && hi === ymax) return [ymin, ymax];
   const pad = (hi - lo) * 0.05;
   return [lo - pad, hi + pad];
+}
+
+/* ---- 그래프 비율 ----
+   높이를 픽셀로 고정하면 폭이 좁은 휴대폰에서 세로로 길쭉해진다.
+   폭에 비율을 곱해 정한다 */
+const RATIOS = { "4:3": 4 / 3, "3:2": 3 / 2, "16:9": 16 / 9, "1:1": 1, "2:1": 2 };
+function plotHeight(cv, ratio) {
+  const w = (cv && cv.clientWidth) || 800;
+  const r = RATIOS[ratio] || RATIOS["4:3"];
+  return Math.round(Math.max(210, Math.min(760, w / r)));
 }

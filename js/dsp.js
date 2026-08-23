@@ -208,29 +208,143 @@ function spectrum(data, fs, N, winType, welch) {
 }
 
 /* 봉우리 찾기.
+
+   그냥 국소 최대를 모으면 봉우리 하나에서 여러 개가 잡힌다.
+   실제로 2.700 / 2.748 / 2.766 Hz 처럼 같은 마루의 잔물결이 따로 세어졌다.
+   그래서 두 가지를 요구한다.
+     - 최소 간격: 이미 뽑은 봉우리와 minSep 안쪽이면 버린다
+     - 돌출도: 양옆 골짜기보다 prominence 배 이상 솟아야 한다
+
    봉우리가 주파수 격자 사이에 떨어지면 진폭이 깎여 보인다(스캘럽 손실).
-   포물선 꼭짓점을 구해 주파수와 진폭을 함께 보정한다 */
-function findPeaks(sp, count, winType) {
+   로그 영역 포물선 꼭짓점으로 주파수와 진폭을 함께 보정한다 */
+function findPeaks(sp, count, winType, opts) {
   const { freq, amp, df } = sp;
+  const o = opts || {};
   const cap = (WINDOWS[winType] || WINDOWS.hann).scallop;
-  const found = [];
+  const minSep = o.minSep !== undefined ? o.minSep : df * 6;
+  const prom = o.prominence !== undefined ? o.prominence : 1.35;
+  const fLo = o.fMin !== undefined ? o.fMin : 0;
+  const fHi = o.fMax !== undefined ? o.fMax : Infinity;
+
+  const raws = [];
   for (let k = 2; k < amp.length - 1; k++) {
-    if (amp[k] > amp[k - 1] && amp[k] >= amp[k + 1]) {
-      /* 로그(dB) 영역에서 포물선을 맞춘다. 창함수 봉우리 모양이 로그에서 훨씬 포물선에 가깝다 */
-      const EPS = 1e-300;
-      const a = Math.log(amp[k - 1] + EPS), b = Math.log(amp[k] + EPS), c = Math.log(amp[k + 1] + EPS);
-      const den = a - 2 * b + c;
-      const shift = den !== 0 ? 0.5 * (a - c) / den : 0;
-      const peakLog = b - 0.25 * (a - c) * shift;
-      const lifted = Math.exp(peakLog);
-      found.push({
-        freq: freq[k] + shift * df,
-        amp: Math.min(lifted, amp[k] * cap),   // 창함수가 허용하는 만큼만 올린다
-        raw: amp[k],
-        index: k
-      });
+    if (freq[k] < fLo || freq[k] > fHi) continue;
+    if (amp[k] > amp[k - 1] && amp[k] >= amp[k + 1]) raws.push(k);
+  }
+
+  /* 좌우로 내려가며 만나는 가장 낮은 골짜기 — 더 높은 봉우리를 만나면 멈춘다 */
+  const valley = k => {
+    let l = amp[k], r = amp[k];
+    for (let i = k - 1; i >= 1; i--) {
+      if (amp[i] > amp[k]) break;
+      if (amp[i] < l) l = amp[i];
+    }
+    for (let i = k + 1; i < amp.length; i++) {
+      if (amp[i] > amp[k]) break;
+      if (amp[i] < r) r = amp[i];
+    }
+    return Math.max(l, r);
+  };
+
+  const cands = raws
+    .filter(k => amp[k] >= valley(k) * prom)
+    .sort((a, b) => amp[b] - amp[a]);
+
+  const picked = [], out = [];
+  for (const k of cands) {
+    if (out.length >= count) break;
+    if (picked.some(f => Math.abs(freq[k] - f) < minSep)) continue;
+    const EPS = 1e-300;
+    const a = Math.log(amp[k - 1] + EPS), b = Math.log(amp[k] + EPS), c = Math.log(amp[k + 1] + EPS);
+    const den = a - 2 * b + c;
+    const shift = den !== 0 ? 0.5 * (a - c) / den : 0;
+    const lifted = Math.exp(b - 0.25 * (a - c) * shift);
+    picked.push(freq[k]);
+    out.push({
+      freq: freq[k] + shift * df,
+      amp: Math.min(lifted, amp[k] * cap),
+      raw: amp[k],
+      index: k
+    });
+  }
+  return out;
+}
+
+/* ============================================================
+   기본진동수 추정 — 진동법의 성패가 여기서 갈린다
+   ============================================================ */
+
+/* 봉우리 하나를 1차 모드로 잘못 집으면 장력이 4배, 9배로 틀린다.
+   그래서 최대 봉우리를 쓰지 않고, 봉우리들이 f1의 정수배로 늘어서는지를 본다.
+   f1 후보는 "각 봉우리 ÷ 1..8" 이고, 낮은 차수가 실제로 보이는 쪽을 선호한다 */
+/* f1 후보 하나를 채점한다.
+
+   두 가지를 조심한다.
+   1) 차수 하나에 봉우리 하나만 센다. 안 그러면 잡음 봉우리 여러 개가
+      모두 "1차"로 계산되어 터무니없이 큰 f1이 최고점을 받는다.
+   2) 점수는 "가장 긴 연속 차수 구간"으로 낸다. 멀리 떨어진 잡음 차수
+      하나가 끼면(예: 1,2,3,4,5,10) 간격 벌점이 정답을 짓누른다. */
+function scoreFundamental(sortedFreqs, f1, MAXN) {
+  if (!(f1 > 0)) return null;
+  const bestPerOrder = new Map();
+  for (const f of sortedFreqs) {
+    const k = Math.round(f / f1);
+    if (k < 1 || k > MAXN + 4) continue;
+    const e = Math.abs(f - k * f1) / f1;
+    if (e >= 0.06) continue;
+    if (!bestPerOrder.has(k) || e < bestPerOrder.get(k)) bestPerOrder.set(k, e);
+  }
+  const all = [...bestPerOrder.keys()].sort((a, b) => a - b);
+  if (!all.length) return null;
+
+  let run = [all[0]], bestRun = run;
+  for (let i = 1; i < all.length; i++) {
+    if (all[i] === all[i - 1] + 1) run.push(all[i]);
+    else run = [all[i]];
+    if (run.length > bestRun.length) bestRun = run;
+  }
+
+  const matched = bestRun.length;
+  const err = bestRun.reduce((a, k) => a + bestPerOrder.get(k), 0) / matched;
+  const extras = all.length - matched;
+  const lowBonus = bestRun[0] === 1 ? 0.6 : (bestRun[0] === 2 ? 0.25 : 0);
+  return {
+    f1, matched, orders: bestRun, allOrders: all, meanErr: err,
+    score: matched - 4 * err + 0.1 * extras + lowBonus,
+    extrapolated: bestRun[0] > 2
+  };
+}
+
+function estimateFundamental(peaks, maxOrder) {
+  const fs = peaks.map(p => p.freq).filter(f => f > 0).sort((a, b) => a - b);
+  if (!fs.length) return null;
+  const MAXN = maxOrder || 8;
+
+  let best = null;
+  for (const p of fs) {
+    for (let n = 1; n <= MAXN; n++) {
+      const c = scoreFundamental(fs, p / n, MAXN);
+      if (c && (!best || c.score > best.score + 1e-9)) best = c;
     }
   }
-  found.sort((p, q) => q.amp - p.amp);
-  return found.slice(0, count);
+  if (!best) return null;
+
+  /* 부조화 확인. f1의 절반·1/3도 배음 열에 얹히므로 그냥 최고점을 쓰면
+     장력이 1/4, 1/9로 나온다. 정수배를 다시 채점해 거의 같은 점수면 큰 쪽을 쓴다 */
+  for (const k of [2, 3]) {
+    const up = scoreFundamental(fs, best.f1 * k, MAXN);
+    if (up && up.score >= best.score - 0.3) best = up;
+  }
+  return best;
+}
+
+/* 추정한 f1에 봉우리들을 차수별로 붙여 표로 만든다 */
+function harmonicTable(peaks, f1) {
+  return peaks
+    .map(p => {
+      const n = Math.round(p.freq / f1);
+      return n >= 1 ? { n, freq: p.freq, amp: p.amp, implied: p.freq / n } : null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.n - b.n);
 }

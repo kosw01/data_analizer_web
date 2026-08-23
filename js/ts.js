@@ -119,7 +119,7 @@ function renderTS(ctx, w, h, th) {
 function drawTS() {
   if ($("tsPlotCard").hidden) return;
   const t0 = performance.now();
-  const { ctx, w, h } = setupCanvas($("tsCv"), ui.cfg.ts.height);
+  const { ctx, w, h } = setupCanvas($("tsCv"), plotHeight($("tsCv"), ui.cfg.ts.ratio));
   const r = renderTS(ctx, w, h, themeNow());
   $("tsLegend").innerHTML = ""; $("tsNote").textContent = "";
   if (!r) return;

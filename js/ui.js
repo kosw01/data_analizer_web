@@ -79,7 +79,7 @@ function pickHTML(ch, group, checked, disabled) {
 
 function renderSelectors() {
   const has = store.channels.length > 0;
-  ["ts", "xy", "sp"].forEach(p => { $(p + "Empty").hidden = has; $(p + "Main").hidden = !has; $(p + "PlotCard").hidden = !has; });
+  ["ts", "xy", "sp", "cb"].forEach(p => { $(p + "Empty").hidden = has; $(p + "Main").hidden = !has; $(p + "PlotCard").hidden = !has; });
   $("agEmpty").hidden = has; $("agMain").hidden = !has; $("agTblCard").hidden = !has;
 
   const ids = new Set(store.channels.map(c => c.id));
@@ -93,6 +93,11 @@ function renderSelectors() {
     const first = store.channels.find(c => canProcess(c).ok);
     ui.spX = first ? first.id : null;
   }
+  if (ui.cbX && !ids.has(ui.cbX)) ui.cbX = null;
+  if (has && !ui.cbX) {
+    const first = store.channels.find(c => canProcess(c).ok);
+    ui.cbX = first ? first.id : null;
+  }
 
   $("tsPicks").innerHTML = store.channels.map(c => pickHTML(c, "ts", ui.tsSel.has(c.id))).join("");
   $("xyX").innerHTML = store.channels.map(c => pickHTML(c, "xyX", ui.xyX === c.id)).join("");
@@ -100,8 +105,10 @@ function renderSelectors() {
   $("agPicks").innerHTML = store.channels.map(c => pickHTML(c, "ag", ui.agSel.has(c.id))).join("");
 
   ["ts", "xy", "sp"].forEach(renderLimitFields);
+  renderRatioSelects();
   renderSPControls();
-  drawTS(); drawXY(); drawSP(); renderAgg(); renderRangeBar();
+  renderCableControls();
+  drawTS(); drawXY(); drawSP(); drawCable(); renderAgg(); renderRangeBar();
 }
 
 /* ============================================================
@@ -136,7 +143,8 @@ function renderRangeBar() {
   const r = ui.range;
   const k = rangeKinds();
   [...document.querySelectorAll('input[name="rmode"]')].forEach(e => e.checked = (e.value === r.mode));
-  $("rangeFields").hidden = r.mode !== "range";
+  $("rangeFields").hidden = !(r.mode === "range" && ui.rangeOpen);
+  $("rToggle").setAttribute("aria-expanded", ui.rangeOpen ? "true" : "false");
   $("fldT").hidden = $("fldT2").hidden = !k.timed;
   $("fldS").hidden = $("fldS2").hidden = !k.indexed;
 
@@ -167,7 +175,7 @@ function renderRangeBar() {
 /* 구간이 바뀌면 세 화면을 함께 다시 그린다 */
 function applyRange() {
   renderRangeBar();
-  drawTS(); drawXY(); drawSP(); renderAgg();
+  drawTS(); drawXY(); drawSP(); drawCable(); renderAgg();
 }
 
 /* ============================================================
@@ -222,4 +230,28 @@ function renderSPControls() {
         ${ui.spX === c.id ? "checked" : ""} ${p.ok ? "" : "disabled"}>
       <span><i class="dot" style="background:${c.color}"></i><em>${c.name}</em></span></label>`;
   }).join("");
+}
+
+
+/* 그래프 비율 선택 */
+function renderRatioSelects() {
+  document.querySelectorAll("select[data-ratio]").forEach(el => {
+    const [kind, field] = el.dataset.ratio.split(".");
+    el.innerHTML = Object.keys(RATIOS).map(k => `<option value="${k}">${k}</option>`).join("");
+    el.value = ui.cfg[kind][field];
+  });
+}
+
+/* 케이블 화면 */
+function renderCableControls() {
+  const cfg = ui.cfg.cb;
+  fillSelect($("cbN"), WINDOW_SIZES.map(n => [n, n.toLocaleString()]), String(cfg.N));
+  $("cbPicks").innerHTML = store.channels.map(c => {
+    const p = canProcess(c);
+    return `<label class="pick" title="${p.why}">
+      <input type="radio" name="cb" data-g="cb" data-cid="${c.id}"
+        ${ui.cbX === c.id ? "checked" : ""} ${p.ok ? "" : "disabled"}>
+      <span><i class="dot" style="background:${c.color}"></i><em>${c.name}</em></span></label>`;
+  }).join("");
+  renderCableList();
 }

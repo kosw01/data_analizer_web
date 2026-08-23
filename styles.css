@@ -144,3 +144,10 @@ canvas#tsCv { cursor:crosshair; touch-action:pan-y; }
 .limits input.v { width:110px; }
 .limits input.t { width:130px; }
 .limits select { padding:7px 10px; font-size:13px; }
+
+/* 기간 막대 접기 */
+.rtoggle { background:transparent; border:none; cursor:pointer; font-family:inherit; font-size:14px;
+  color:var(--textStrong); padding:4px 0; display:inline-flex; align-items:center; gap:6px; }
+.rtoggle .caret { color:var(--textDim); font-size:11px; transition:transform .15s; }
+.rtoggle[aria-expanded="true"] .caret { transform:rotate(90deg); }
+.rangebar { padding:10px 20px; }

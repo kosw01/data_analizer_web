@@ -56,6 +56,7 @@ $("tabs").addEventListener("click", e => {
   if (ui.page === "ts") drawTS();
   if (ui.page === "xy") drawXY();
   if (ui.page === "sp") drawSP();
+  if (ui.page === "cb") drawCable();
   if (ui.page === "ag") renderAgg();
 });
 
@@ -103,6 +104,7 @@ document.addEventListener("change", e => {
   if (g === "xyY") { e.target.checked ? ui.xySel.add(cid) : ui.xySel.delete(cid); drawXY(); }
   if (g === "ag") { e.target.checked ? ui.agSel.add(cid) : ui.agSel.delete(cid); renderAgg(); }
   if (g === "sp") { ui.spX = cid; drawSP(); }
+  if (g === "cb") { ui.cbX = cid; drawCable(); }
 });
 
 /* 그래프 설정 */
@@ -110,11 +112,9 @@ document.addEventListener("input", e => {
   const key = e.target.dataset.cfg; if (!key) return;
   const [kind, field] = key.split(".");
   const v = e.target.type === "checkbox" ? e.target.checked : e.target.value;
-  const NUMERIC = ["lineWidth", "dot", "height", "sheight", "lowCut", "highCut"];
+  const NUMERIC = ["lineWidth", "dot", "lowCut", "highCut", "fMin", "fMax", "minSep"];
   ui.cfg[kind][field] = NUMERIC.includes(field) ? (parseFloat(v) || ui.cfg[kind][field]) : v;
-  if (kind === "ts") drawTS();
-  else if (kind === "xy") drawXY();
-  else drawSP();
+  redraw(kind);
 });
 
 $("tsYMode").onchange = drawTS;
@@ -131,14 +131,14 @@ $("agCsv").onclick = exportCsv;
 
 $("reset").onclick = () => {
   store.tables = []; store.channels = [];
-  ui.tsSel.clear(); ui.xySel.clear(); ui.agSel.clear(); ui.xyX = null; ui.spX = null;
+  ui.tsSel.clear(); ui.xySel.clear(); ui.agSel.clear(); ui.xyX = null; ui.spX = null; ui.cbX = null; ui.cbList = [];
   ui.range = { mode: "all", tStart: null, tEnd: null, sStart: null, sEnd: null };
   renderFiles(); renderChannels(); renderRangeBar();
 };
 
 let rt;
-window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { drawTS(); drawXY(); drawSP(); }, 120); });
-matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { drawTS(); drawXY(); drawSP(); });
+window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { drawTS(); drawXY(); drawSP(); drawCable(); }, 120); });
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { drawTS(); drawXY(); drawSP(); drawCable(); });
 
 /* ============================================================
    구간 조작
@@ -146,12 +146,19 @@ matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { dr
 
 document.querySelectorAll('input[name="rmode"]').forEach(e => e.onchange = () => {
   ui.range.mode = e.value;
+  ui.rangeOpen = e.value === "range";
   applyRange();
 });
 
 $("rFull").onclick = () => {
   ui.range = { mode: "all", tStart: null, tEnd: null, sStart: null, sEnd: null };
   applyRange();
+};
+
+$("rToggle").onclick = () => {
+  ui.rangeOpen = !ui.rangeOpen;
+  if (ui.rangeOpen && ui.range.mode !== "range") { ui.range.mode = "range"; applyRange(); }
+  else renderRangeBar();
 };
 
 $("rTStart").oninput = () => { ui.range.tStart = fromLocalInput($("rTStart").value); applyRange(); };
@@ -219,9 +226,14 @@ function applyLimitEdit(key, value, redrawFields) {
   const [kind, idx, field] = key.split(".");
   ui.cfg[kind].limits[+idx][field] = value;
   if (redrawFields) renderLimitFields(kind);
+  redraw(kind);
+}
+
+function redraw(kind) {
   if (kind === "ts") drawTS();
   else if (kind === "xy") drawXY();
-  else drawSP();
+  else if (kind === "sp") drawSP();
+  else if (kind === "cb") drawCable();
 }
 
 /* ============================================================
@@ -240,3 +252,27 @@ $("spWin").onchange = e => { ui.cfg.sp.win = e.target.value; drawSP(); };
 $("spPng").onclick  = () => saveSpPng("time");
 $("spFPng").onclick = () => saveSpPng("freq");
 $("spCsv").onclick  = exportSpectrumCsv;
+
+/* 그래프 비율 */
+document.addEventListener("change", e => {
+  const key = e.target.dataset.ratio; if (!key) return;
+  const [kind, field] = key.split(".");
+  ui.cfg[kind][field] = e.target.value;
+  redraw(kind);
+});
+
+/* ============================================================
+   케이블 장력
+   ============================================================ */
+
+$("cbN").onchange  = e => { ui.cfg.cb.N = +e.target.value; drawCable(); };
+$("cbAdd").onclick = addCableResult;
+$("cbCsv").onclick = exportCableCsv;
+$("cbPng").onclick = saveCablePng;
+$("cbList").addEventListener("click", e => {
+  const b = e.target.closest("button");
+  if (b && b.dataset.cbdel !== undefined) {
+    ui.cbList.splice(+b.dataset.cbdel, 1);
+    renderCableList();
+  }
+});
