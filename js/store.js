@@ -26,7 +26,7 @@ function newLimits() {
 const ui = {
   page: "data", tsSel: new Set(), xyX: null, xySel: new Set(), agSel: new Set(),
   range: { mode: "all", tStart: null, tEnd: null, sStart: null, sEnd: null },
-  spX: null, cbX: null, cbList: [], rangeOpen: false,
+  spX: null, cbX: null, cbList: [], cbModes: [], rangeOpen: false,
   cfg: {
     ts: { title:"", xLabel:"", yLabel:"", yMin:"", yMax:"", lineWidth:1.4, ratio:"4:3", grid:true, limits: newLimits() },
     xy: { title:"", xLabel:"", yLabel:"", yMin:"", yMax:"", dot:2.2, ratio:"4:3", grid:true, limits: newLimits() },
@@ -37,8 +37,8 @@ const ui = {
       title:"", sTitle:"", grid:true, limits: newLimits()
     },
     cb: {
-      m:"", L:"", fMin:0.4, fMax:20, minSep:0.1,
-      N:16384, win:"hann", f1Manual:"",
+      m:"", massUnit:"ton", L:"", fMin:0.4, fMax:20, minSep:0.1,
+      N:16384, win:"hann",
       title:"", ratio:"4:3", grid:true
     }
   }

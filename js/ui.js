@@ -246,6 +246,7 @@ function renderRatioSelects() {
 function renderCableControls() {
   const cfg = ui.cfg.cb;
   fillSelect($("cbN"), WINDOW_SIZES.map(n => [n, n.toLocaleString()]), String(cfg.N));
+  fillSelect($("cbUnit"), Object.entries(MASS_UNITS).map(([k, v]) => [k, v.label]), cfg.massUnit);
   $("cbPicks").innerHTML = store.channels.map(c => {
     const p = canProcess(c);
     return `<label class="pick" title="${p.why}">

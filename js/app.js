@@ -131,7 +131,7 @@ $("agCsv").onclick = exportCsv;
 
 $("reset").onclick = () => {
   store.tables = []; store.channels = [];
-  ui.tsSel.clear(); ui.xySel.clear(); ui.agSel.clear(); ui.xyX = null; ui.spX = null; ui.cbX = null; ui.cbList = [];
+  ui.tsSel.clear(); ui.xySel.clear(); ui.agSel.clear(); ui.xyX = null; ui.spX = null; ui.cbX = null; ui.cbList = []; ui.cbModes = []; cbModesKey = "";
   ui.range = { mode: "all", tStart: null, tEnd: null, sStart: null, sEnd: null };
   renderFiles(); renderChannels(); renderRangeBar();
 };
@@ -265,7 +265,27 @@ document.addEventListener("change", e => {
    케이블 장력
    ============================================================ */
 
-$("cbN").onchange  = e => { ui.cfg.cb.N = +e.target.value; drawCable(); };
+$("cbN").onchange    = e => { ui.cfg.cb.N = +e.target.value; drawCable(); };
+$("cbUnit").onchange = e => { ui.cfg.cb.massUnit = e.target.value; drawCable(); };
+$("cbBridge").oninput = () => {};
+$("cbRefill").onclick = () => { cbModesKey = ""; drawCable(); };
+$("cbPrint").onclick  = () => window.print();
+
+/* 차수 표 편집 */
+$("cbModeTbl").addEventListener("input", e => {
+  const key = e.target.dataset.mode; if (!key) return;
+  const [i, field] = key.split(".");
+  ui.cbModes[+i][field] = field === "use" ? e.target.checked : e.target.value;
+  drawCable();
+});
+$("cbModeTbl").addEventListener("change", e => {
+  const key = e.target.dataset.mode;
+  if (key && e.target.type === "checkbox") {
+    const [i] = key.split(".");
+    ui.cbModes[+i].use = e.target.checked;
+    drawCable();
+  }
+});
 $("cbAdd").onclick = addCableResult;
 $("cbCsv").onclick = exportCableCsv;
 $("cbPng").onclick = saveCablePng;
@@ -273,6 +293,6 @@ $("cbList").addEventListener("click", e => {
   const b = e.target.closest("button");
   if (b && b.dataset.cbdel !== undefined) {
     ui.cbList.splice(+b.dataset.cbdel, 1);
-    renderCableList();
+    renderCableList(); renderReport();
   }
 });

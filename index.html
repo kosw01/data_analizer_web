@@ -217,9 +217,12 @@
       <h2>채널 <span class="count">등간격 시간축만</span></h2>
       <div class="cols" id="cbPicks"></div>
       <div class="row">
-        <div class="fld"><span class="lb">단위질량 (kg/m)</span><input class="box" type="number" step="any" min="0" data-cfg="cb.m" placeholder="예: 51.2"></div>
-        <div class="fld"><span class="lb">유효길이 (m)</span><input class="box" type="number" step="any" min="0" data-cfg="cb.L" placeholder="예: 62.4"></div>
+        <div class="fld"><span class="lb">교량명</span><input class="box" id="cbBridge" placeholder="예: 동강대교"></div>
+        <div class="fld"><span class="lb">단위질량</span><input class="box sm" type="number" step="any" min="0" data-cfg="cb.m" placeholder="0.077"></div>
+        <div class="fld"><span class="lb">단위</span><select id="cbUnit"></select></div>
+        <div class="fld"><span class="lb">유효길이 (m)</span><input class="box sm" type="number" step="any" min="0" data-cfg="cb.L" placeholder="77.152"></div>
       </div>
+      <div class="chips" id="cbProps"></div>
       <div class="row">
         <div class="fld"><span class="lb">탐색 하한 (Hz)</span><input class="box sm" type="number" step="0.1" min="0" data-cfg="cb.fMin" value="0.4"></div>
         <div class="fld"><span class="lb">탐색 상한 (Hz)</span><input class="box sm" type="number" step="1" min="0" data-cfg="cb.fMax" value="20"></div>
@@ -229,21 +232,28 @@
       <div class="row">
         <span class="muted">자동 추정 1차 진동수 <b id="cbF1Est">—</b></span>
         <div class="spacer"></div>
-        <div class="fld"><span class="lb">직접 지정 (Hz)</span><input class="box sm" type="number" step="any" min="0" data-cfg="cb.f1Manual" placeholder="비우면 자동"></div>
+        <button class="b btn-ghost btn-sm" id="cbRefill">차수 다시 배정</button>
       </div>
     </div>
+
     <div class="card" id="cbPlotCard" hidden>
       <canvas id="cbCv"></canvas>
+      <div class="row"><button class="b btn-ghost btn-sm" id="cbPng">스펙트럼 PNG</button></div>
+
+      <h2 style="margin-top:20px">사용할 차수 <span class="count">그래프를 보고 직접 켜고 끄세요</span></h2>
+      <div class="tbl-wrap" style="max-height:340px"><table id="cbModeTbl"></table></div>
+
+      <h2 style="margin-top:20px">(fn/n)² – n² 회귀</h2>
+      <canvas id="cbRegCv"></canvas>
+
       <div class="stat" id="cbOut"></div>
-      <div class="tbl-wrap" style="max-height:280px"><table id="cbTable"></table></div>
       <div class="note" id="cbNote"></div>
       <div class="row">
-        <input class="box" id="cbName" placeholder="케이블 이름 (예: C-12)">
-        <button class="b btn-primary btn-sm" id="cbAdd" disabled>결과 목록에 담기</button>
-        <div class="spacer"></div>
-        <button class="b btn-ghost btn-sm" id="cbPng">스펙트럼 PNG</button>
+        <input class="box" id="cbName" placeholder="케이블 번호 (예: CL01)">
+        <button class="b btn-primary btn-sm" id="cbAdd" disabled>보고서에 추가</button>
       </div>
     </div>
+
     <div class="card" id="cbListCard" hidden>
       <div class="row" style="margin-top:0">
         <h2 style="margin:0">결과 목록</h2>
@@ -251,6 +261,15 @@
         <button class="b btn-ghost btn-sm" id="cbCsv">CSV로 내보내기</button>
       </div>
       <div class="tbl-wrap"><table id="cbList"></table></div>
+    </div>
+
+    <div class="card" id="cbReportCard" hidden>
+      <div class="row no-print" style="margin-top:0">
+        <h2 style="margin:0">보고서 미리보기</h2>
+        <div class="spacer"></div>
+        <button class="b btn-primary btn-sm" id="cbPrint">PDF로 저장 (인쇄)</button>
+      </div>
+      <div id="cbReport"></div>
     </div>
   </section>
 
