@@ -16,9 +16,12 @@ const LIMIT_TONES = {
   base:   { label:"기준", color:"#0B6BCB" },
   gray:   { label:"보조", color:"#8B95A1" }
 };
-const LIMIT_ORDER = ["danger", "warn", "warn", "danger"];
+/* 상한 4개 + 하한 4개. 그리는 방식은 같고 묶어 보여주기 위해 side 를 둔다 */
+const LIMIT_TONE_ORDER = ["danger", "warn", "base", "gray"];
 function newLimits() {
-  return LIMIT_ORDER.map(t => ({ v: "", label: "", tone: t }));
+  const make = side => LIMIT_TONE_ORDER.map((t, i) =>
+    ({ v: "", label: "", tone: t, side, idx: i + 1 }));
+  return [...make("upper"), ...make("lower")];
 }
 
 /* 구간 — 세 분석 화면이 공유한다.
@@ -35,6 +38,10 @@ const ui = {
       N:4096, win:"hann", welch:true, log:false, fmax:"", skip:10,
       showRaw:true, ratio:"2:1", sRatio:"4:3",
       title:"", sTitle:"", grid:true, limits: newLimits()
+    },
+    ag: {
+      ch:"", stat:"mean", title:"", xLabel:"", yLabel:"",
+      yMin:"", yMax:"", ratio:"2:1", grid:true, limits: newLimits()
     },
     cb: {
       m:"", massUnit:"ton", L:"", fMin:0.4, fMax:20, minSep:0.1, f1Manual:"",

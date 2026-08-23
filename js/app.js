@@ -128,6 +128,9 @@ $("xyPng").onclick = () => savePng("xy");
 $("agUnit").onchange = renderAgg;
 document.querySelectorAll(".agStat").forEach(e => e.onchange = renderAgg);
 $("agCsv").onclick = exportCsv;
+$("agBarCh").onchange = e => { ui.cfg.ag.ch = e.target.value; drawBars(); };
+$("agBarStat").onchange = e => { ui.cfg.ag.stat = e.target.value; drawBars(); };
+$("agBarPng").onclick = saveBarPng;
 
 $("reset").onclick = () => {
   store.tables = []; store.channels = [];
@@ -137,8 +140,8 @@ $("reset").onclick = () => {
 };
 
 let rt;
-window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { drawTS(); drawXY(); drawSP(); drawCable(); }, 120); });
-matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { drawTS(); drawXY(); drawSP(); drawCable(); });
+window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { drawTS(); drawXY(); drawSP(); drawCable(); drawBars(); }, 120); });
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { drawTS(); drawXY(); drawSP(); drawCable(); drawBars(); });
 
 /* ============================================================
    구간 조작
@@ -234,6 +237,7 @@ function redraw(kind) {
   else if (kind === "xy") drawXY();
   else if (kind === "sp") drawSP();
   else if (kind === "cb") drawCable();
+  else if (kind === "ag") drawBars();
 }
 
 /* ============================================================

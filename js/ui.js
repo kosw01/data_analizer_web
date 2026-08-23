@@ -105,7 +105,7 @@ function renderSelectors() {
   $("xyY").innerHTML = store.channels.map(c => pickHTML(c, "xyY", ui.xySel.has(c.id), c.id === ui.xyX)).join("");
   $("agPicks").innerHTML = store.channels.map(c => pickHTML(c, "ag", ui.agSel.has(c.id))).join("");
 
-  ["ts", "xy", "sp"].forEach(renderLimitFields);
+  ["ts", "xy", "sp", "ag"].forEach(renderLimitFields);
   renderRatioSelects();
   renderSPControls();
   renderCableControls();
@@ -189,15 +189,24 @@ function renderLimitFields(kind) {
   const lims = ui.cfg[kind].limits;
   const opts = Object.entries(LIMIT_TONES)
     .map(([k, v]) => `<option value="${k}">${v.label}</option>`).join("");
-  box.innerHTML =
-    `<div class="hd">관리기준선 · 최대 4개 · 값을 비우면 그리지 않습니다</div>` +
-    lims.map((l, i) => `
+
+  const rowHtml = (l, i) => `
       <div class="lrow">
         <span class="swatch" style="background:${LIMIT_TONES[l.tone].color}"></span>
         <input class="box v" type="number" step="any" placeholder="값" data-lim="${kind}.${i}.v" value="${l.v}">
-        <input class="box t" placeholder="이름 (예: 상한)" data-lim="${kind}.${i}.label" value="${l.label}">
+        <input class="box t" placeholder="${l.side === "upper" ? "상한" : "하한"}${l.idx}" data-lim="${kind}.${i}.label" value="${l.label}">
         <select data-lim="${kind}.${i}.tone">${opts}</select>
-      </div>`).join("");
+      </div>`;
+
+  const group = side => lims.map((l, i) => [l, i]).filter(([l]) => l.side === side)
+    .map(([l, i]) => rowHtml(l, i)).join("");
+
+  box.innerHTML =
+    `<div class="hd">관리기준선 · 상한 4개 · 하한 4개 · 값을 비우면 그리지 않습니다</div>
+     <div class="lgroups">
+       <div><div class="gh">상한</div>${group("upper")}</div>
+       <div><div class="gh">하한</div>${group("lower")}</div>
+     </div>`;
   lims.forEach((l, i) => {
     const sel = box.querySelector(`select[data-lim="${kind}.${i}.tone"]`);
     if (sel) sel.value = l.tone;
