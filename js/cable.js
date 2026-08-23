@@ -290,7 +290,7 @@ function renderCableVertical(ctx, w, h, th) {
   hi *= 1.16;
 
   const fLo = freq[kmin], fHi = fMax;
-  const L = 52, Rr = 12, T = 12, B = 40;
+  const L = 46, Rr = 10, T = 10, B = 34;
   const pw = w - L - Rr, ph = h - T - B;
   const px = a => L + a / hi * pw;
   const py = f => T + (f - fLo) / ((fHi - fLo) || 1) * ph;    // 아래로 갈수록 고주파
@@ -323,15 +323,19 @@ function renderCableVertical(ctx, w, h, th) {
   }
   ctx.stroke();
 
-  ctx.font = "700 10px -apple-system,sans-serif";
-  ctx.textAlign = "left"; ctx.textBaseline = "middle";
+  /* 봉우리 값은 점 오른쪽에 쓰되, 오른쪽이 좁으면 왼쪽으로 넘긴다 */
+  ctx.font = "700 9px -apple-system,sans-serif";
+  ctx.textBaseline = "middle";
   for (const p of peaks) {
     if (p.freq > fHi || p.freq < fLo) continue;
     const X = px(p.amp), Y = py(p.freq);
     ctx.fillStyle = ch.color;
-    ctx.beginPath(); ctx.arc(X, Y, 2.5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(X, Y, 2.2, 0, Math.PI * 2); ctx.fill();
+    const label = p.freq.toFixed(3);
+    const tw = ctx.measureText(label).width;
     ctx.fillStyle = th.textNormal;
-    ctx.fillText(p.freq.toFixed(3), Math.min(X + 5, L + pw - 34), Y);
+    if (X + 5 + tw <= L + pw - 2) { ctx.textAlign = "left"; ctx.fillText(label, X + 5, Y); }
+    else { ctx.textAlign = "right"; ctx.fillText(label, X - 5, Y); }
   }
   ctx.restore();
   return true;
@@ -489,6 +493,16 @@ function snapshot(renderFn, ratio, extra) {
   return off.toDataURL("image/png");
 }
 
+/* 보고서 지면 규격 (px). A4 세로 210×297mm 에서 여백 12mm 를 뺀 186×273mm 를
+   96dpi 기준 px 로 환산한 값이다. 화면과 인쇄가 같은 비율을 쓰게 하려고 한곳에 모아둔다 */
+const RP = {
+  pageW: 703, pageH: 1032,
+  midH: 470,          // 차수 표 + 세로 스펙트럼 줄
+  botH: 260,          // 결과 표 + 회귀 그래프 줄
+  specW: 232, specH: 470,
+  regW: 372, regH: 260
+};
+
 /* 크기를 직접 정해 그린다. 보고서 칸 모양에 맞춰야 해서 비율만으로는 부족하다 */
 function snapshotSize(renderFn, w, h, extra) {
   const off = document.createElement("canvas");
@@ -508,8 +522,9 @@ function addCableResult() {
     source: R0.ch.source,
     mIn: R0.mIn, unitLabel: R0.unit.label, mTon: R0.mTon, L: R0.L,
     T: R0.T,
-    verticalPng: snapshotSize(renderCableVertical, 300, 780),
-    regPng: snapshotSize(renderRegression, 720, 300, R0.T)
+    /* 지면 칸 크기와 같은 비율로 그린다. 늘이거나 줄이면 글자가 뭉개진다 */
+    verticalPng: snapshotSize(renderCableVertical, RP.specW, RP.specH),
+    regPng: snapshotSize(renderRegression, RP.regW, RP.regH, R0.T)
   });
   $("cbName").value = "";
   renderCableList();
@@ -596,7 +611,7 @@ function renderReport() {
         <span><b>사용 차수</b> ${T.count}개</span>
       </div>
 
-      <div class="rp-cols">
+      <div class="rp-cols rp-mid">
         <div class="rp-left">
           <h3>□ Vibration Method</h3>
           <table class="rp-tbl">

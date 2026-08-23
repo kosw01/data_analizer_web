@@ -157,45 +157,66 @@ input.box.mini { width:96px; padding:5px 8px; font-size:13px; border-radius:8px;
 #cbModeTbl tr.off td { opacity:.42; }
 #cbModeTbl td:first-child, #cbModeTbl th:first-child { text-align:center; }
 
-/* 보고서 — 케이블 한 가닥이 A4 한 쪽에 들어가야 한다 */
-.rp { background:#fff; color:#191F28; border:1px solid #E5E8EB; border-radius:12px;
-      padding:20px 22px; margin-bottom:18px; }
-.rp-head { display:flex; justify-content:space-between; align-items:flex-start; gap:18px;
-           border-bottom:2px solid #191F28; padding-bottom:8px; margin-bottom:10px; flex-wrap:wrap; }
-.rp-t1 { font-size:17px; font-weight:700; letter-spacing:-0.2px; }
-.rp-t2 { font-size:12.5px; color:#4E5968; }
-.rp-id { border-collapse:collapse; font-size:11.5px; }
-.rp-id th { background:#F2F4F6; color:#4E5968; font-weight:700; padding:4px 9px;
-            border:1px solid #E5E8EB; text-align:left; white-space:nowrap; }
-.rp-id td { padding:4px 11px; border:1px solid #E5E8EB; white-space:nowrap; }
+/* 보고서 — A4 한 쪽에 칸을 고정한다.
+   화면은 px, 인쇄는 mm 를 쓰되 각 칸의 비율은 같게 맞춘다.
+   그래야 캔버스로 그린 그림이 늘어나거나 눌리지 않는다. */
+.rp {
+  --page-w: 703px;   /* 186mm @96dpi */
+  --page-h: 1032px;  /* 273mm */
+  --mid-h: 470px;
+  --bot-h: 260px;
+  --spec-w: 232px;
+  --reg-w: 372px;
+  width: var(--page-w); height: var(--page-h);
+  box-sizing: border-box;
+  background:#fff; color:#191F28; border:1px solid #E5E8EB; border-radius:10px;
+  padding:18px 20px; margin:0 auto 18px;
+  display:flex; flex-direction:column;
+  font-variant-numeric:tabular-nums;
+}
+#cbReport { overflow-x:auto; }
 
-.rp-props { display:flex; flex-wrap:wrap; gap:6px 18px; font-size:11.5px; color:#4E5968;
-            margin-bottom:12px; font-variant-numeric:tabular-nums; }
+.rp-head { display:flex; justify-content:space-between; align-items:flex-start; gap:16px;
+           border-bottom:2px solid #191F28; padding-bottom:7px; margin-bottom:8px; flex-shrink:0; }
+.rp-t1 { font-size:16px; font-weight:700; letter-spacing:-0.2px; }
+.rp-t2 { font-size:12px; color:#4E5968; }
+.rp-id { border-collapse:collapse; font-size:11px; }
+.rp-id th { background:#F2F4F6; color:#4E5968; font-weight:700; padding:3px 8px;
+            border:1px solid #E5E8EB; text-align:left; white-space:nowrap; }
+.rp-id td { padding:3px 10px; border:1px solid #E5E8EB; white-space:nowrap; text-align:right; }
+
+.rp-props { display:flex; flex-wrap:wrap; gap:4px 16px; font-size:11px; color:#4E5968;
+            margin-bottom:8px; flex-shrink:0; }
 .rp-props b { color:#8B95A1; font-weight:600; margin-right:3px; }
 
-.rp h3 { font-size:12.5px; font-weight:700; margin:0 0 6px; color:#191F28; }
-.rp-cols { display:flex; gap:16px; align-items:flex-start; }
-.rp-left { flex:1; min-width:0; }
-.rp-right { width:210px; flex-shrink:0; margin:0; }
-.rp-right2 { width:330px; flex-shrink:0; margin:0; }
-.rp-cols figure img { width:100%; border:1px solid #E5E8EB; border-radius:6px; display:block; }
-.rp-cols figcaption { font-size:10px; color:#8B95A1; margin-top:3px; text-align:center; }
-.rp-bottom { margin-top:14px; }
+.rp h3 { font-size:12px; font-weight:700; margin:0 0 5px; color:#191F28; flex-shrink:0; }
 
-.rp-kv, .rp-tbl { border-collapse:collapse; font-size:11.5px; font-variant-numeric:tabular-nums; }
-.rp-kv th { text-align:left; font-weight:500; color:#4E5968; padding:3px 12px 3px 0; white-space:nowrap; }
-.rp-kv td { padding:3px 9px; text-align:right; white-space:nowrap; }
+.rp-cols { display:flex; gap:14px; align-items:stretch; flex-shrink:0; }
+.rp-mid { height: var(--mid-h); }
+.rp-bottom { height: var(--bot-h); margin-top:12px; }
+.rp-left { flex:1; min-width:0; display:flex; flex-direction:column; }
+.rp-right  { width: var(--spec-w); flex-shrink:0; margin:0; display:flex; flex-direction:column; }
+.rp-right2 { width: var(--reg-w);  flex-shrink:0; margin:0; display:flex; flex-direction:column; }
+.rp-cols figure img { width:100%; flex:1; min-height:0; object-fit:contain;
+                      border:1px solid #E5E8EB; border-radius:5px; display:block; }
+.rp-cols figcaption { font-size:9.5px; color:#8B95A1; margin-top:3px; text-align:center; flex-shrink:0; }
+
+.rp-kv, .rp-tbl { border-collapse:collapse; font-size:11px; }
+.rp-kv th { text-align:left; font-weight:500; color:#4E5968; padding:2.5px 12px 2.5px 0; white-space:nowrap; }
+.rp-kv td { padding:2.5px 9px; text-align:right; white-space:nowrap; }
 .rp-kv td:last-child { text-align:left; color:#8B95A1; }
 .rp-kv tr.hl th, .rp-kv tr.hl td { font-weight:700; background:#E3F0FC; }
 .rp-tbl { width:100%; }
 /* 화면용 표의 sticky 가 인쇄에서 머리글을 아래로 밀어버린다. 여기서는 끈다 */
 .rp-tbl thead th, .rp-tbl th, .rp-tbl td { position:static !important; }
-.rp-tbl th { background:#F2F4F6; border:1px solid #E5E8EB; padding:3px 8px; font-weight:700; color:#4E5968; text-align:right; }
+.rp-tbl th { background:#F2F4F6; border:1px solid #E5E8EB; padding:3px 8px;
+             font-weight:700; color:#4E5968; text-align:right; }
 .rp-tbl th:first-child { text-align:center; }
-.rp-tbl td { border:1px solid #E5E8EB; padding:2.5px 8px; text-align:right; background:#fff; }
+.rp-tbl td { border:1px solid #E5E8EB; padding:2px 8px; text-align:right; background:#fff; }
 .rp-tbl td:first-child { text-align:center; font-weight:600; }
-.rp-foot { margin-top:12px; padding-top:6px; border-top:1px solid #E5E8EB;
-           font-size:10px; color:#8B95A1; text-align:right; }
+
+.rp-foot { margin-top:auto; padding-top:6px; border-top:1px solid #E5E8EB;
+           font-size:9.5px; color:#8B95A1; text-align:right; flex-shrink:0; }
 
 /* 인쇄: 보고서만 남기고 라이트 고정 */
 @media print {
@@ -206,9 +227,14 @@ input.box.mini { width:96px; padding:5px 8px; font-size:13px; border-radius:8px;
   section:not([data-page="cb"]),
   #cbEmpty, #cbMain, #cbPlotCard, #cbListCard { display:none !important; }
   #cbReportCard { background:#fff !important; padding:0 !important; margin:0 !important; border-radius:0; }
-  .rp { border:none; border-radius:0; padding:0; margin:0;
-        break-after:page; page-break-after:always;
-        break-inside:avoid; page-break-inside:avoid; }
+  .rp {
+    --page-w: 186mm; --page-h: 273mm;
+    --mid-h: 124mm;  --bot-h: 69mm;
+    --spec-w: 61mm;  --reg-w: 98mm;
+    border:none; border-radius:0; padding:0; margin:0;
+    break-after:page; page-break-after:always;
+    break-inside:avoid; page-break-inside:avoid;
+  }
   .rp-cols, .rp-tbl, .rp-kv, .rp-cols figure { break-inside:avoid; page-break-inside:avoid; }
   .rp-tbl thead { display:table-header-group; }
   .rp:last-child { break-after:auto; page-break-after:auto; }
