@@ -23,6 +23,7 @@
     <button data-p="data" aria-selected="true">데이터<span class="n" id="nData"></span></button>
     <button data-p="ts" aria-selected="false">시계열</button>
     <button data-p="xy" aria-selected="false">상관</button>
+    <button data-p="sp" aria-selected="false">신호처리</button>
     <button data-p="ag" aria-selected="false">분석</button>
   </nav>
 
@@ -105,6 +106,7 @@
           <div class="fld"><span class="lb">높이 (px)</span><input class="box sm" type="number" step="10" min="240" max="900" data-cfg="ts.height" value="430"></div>
           <div class="fld" style="justify-content:flex-end"><label class="sw"><input type="checkbox" data-cfg="ts.grid" checked> 격자</label></div>
         </div>
+        <div class="limits" id="tsLimits"></div>
       </details>
     </div>
     <div class="card" id="tsPlotCard" hidden>
@@ -142,6 +144,7 @@
           <div class="fld"><span class="lb">높이 (px)</span><input class="box sm" type="number" step="10" min="240" max="900" data-cfg="xy.height" value="470"></div>
           <div class="fld" style="justify-content:flex-end"><label class="sw"><input type="checkbox" data-cfg="xy.grid" checked> 격자</label></div>
         </div>
+        <div class="limits" id="xyLimits"></div>
       </details>
     </div>
     <div class="card" id="xyPlotCard" hidden>
@@ -149,6 +152,57 @@
       <div class="stat" id="xyStat"></div>
       <div class="note" id="xyNote"></div>
       <div class="row"><button class="b btn-ghost btn-sm" id="xyPng">PNG로 저장</button></div>
+    </div>
+  </section>
+
+
+  <!-- ===== 신호처리 ===== -->
+  <section data-page="sp" hidden>
+    <div class="card" id="spEmpty"><div class="empty">데이터 페이지에서 채널을 먼저 등록하세요.</div></div>
+    <div class="card" id="spMain" hidden>
+      <h2>채널 <span class="count">등간격 시간축만</span></h2>
+      <div class="cols" id="spPicks"></div>
+      <div class="row">
+        <label class="sw">기준 맞추기
+          <select id="spZero"></select>
+        </label>
+        <label class="sw">필터
+          <select id="spFilter"></select>
+        </label>
+        <div class="fld" id="spLowWrap"><span class="lb">저역통과 차단</span><input class="box sm" type="number" step="0.1" min="0" data-cfg="sp.lowCut" value="10"></div>
+        <div class="fld" id="spHighWrap"><span class="lb">고역통과 차단</span><input class="box sm" type="number" step="0.1" min="0" data-cfg="sp.highCut" value="1"></div>
+        <label class="sw"><input type="checkbox" data-cfg="sp.showRaw" checked> 원본 겹쳐 보기</label>
+      </div>
+      <div class="row">
+        <label class="sw">윈도우 크기 <select id="spN"></select></label>
+        <label class="sw">창함수 <select id="spWin"></select></label>
+        <label class="sw"><input type="checkbox" data-cfg="sp.welch" checked> 겹쳐 평균</label>
+        <label class="sw"><input type="checkbox" data-cfg="sp.log"> 진폭 로그축</label>
+        <div class="fld"><span class="lb">최대 주파수</span><input class="box sm" type="number" step="1" min="0" data-cfg="sp.fmax" placeholder="나이퀴스트"></div>
+      </div>
+      <details class="set">
+        <summary>그래프 설정</summary>
+        <div class="grid">
+          <div class="fld"><span class="lb">시계열 제목</span><input class="box" data-cfg="sp.title" placeholder="(없음)"></div>
+          <div class="fld"><span class="lb">스펙트럼 제목</span><input class="box" data-cfg="sp.sTitle" placeholder="(없음)"></div>
+          <div class="fld"><span class="lb">시계열 높이</span><input class="box sm" type="number" step="10" min="200" max="800" data-cfg="sp.height" value="300"></div>
+          <div class="fld"><span class="lb">스펙트럼 높이</span><input class="box sm" type="number" step="10" min="200" max="800" data-cfg="sp.sheight" value="320"></div>
+          <div class="fld" style="justify-content:flex-end"><label class="sw"><input type="checkbox" data-cfg="sp.grid" checked> 격자</label></div>
+        </div>
+        <div class="limits" id="spLimits"></div>
+      </details>
+    </div>
+    <div class="card" id="spPlotCard" hidden>
+      <canvas id="spCv"></canvas>
+      <div class="row"><button class="b btn-ghost btn-sm" id="spPng">시계열 PNG</button></div>
+      <hr style="border:none;border-top:1px solid var(--divider);margin:16px 0">
+      <canvas id="spFCv"></canvas>
+      <div class="tbl-wrap" style="max-height:260px"><table id="spPeaks"></table></div>
+      <div class="note" id="spNote"></div>
+      <div class="row">
+        <button class="b btn-ghost btn-sm" id="spFPng">스펙트럼 PNG</button>
+        <button class="b btn-ghost btn-sm" id="spCsv">스펙트럼 CSV</button>
+      </div>
     </div>
   </section>
 
@@ -194,8 +248,10 @@
 <script src="js/parse.js"></script>
 <script src="js/store.js"></script>
 <script src="js/plot.js"></script>
+<script src="js/dsp.js"></script>
 <script src="js/ts.js"></script>
 <script src="js/xy.js"></script>
+<script src="js/sp.js"></script>
 <script src="js/agg.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/app.js"></script>

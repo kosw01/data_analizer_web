@@ -55,6 +55,7 @@ $("tabs").addEventListener("click", e => {
   renderRangeBar();
   if (ui.page === "ts") drawTS();
   if (ui.page === "xy") drawXY();
+  if (ui.page === "sp") drawSP();
   if (ui.page === "ag") renderAgg();
 });
 
@@ -101,6 +102,7 @@ document.addEventListener("change", e => {
   if (g === "xyX") { ui.xyX = cid; ui.xySel.delete(cid); renderSelectors(); }
   if (g === "xyY") { e.target.checked ? ui.xySel.add(cid) : ui.xySel.delete(cid); drawXY(); }
   if (g === "ag") { e.target.checked ? ui.agSel.add(cid) : ui.agSel.delete(cid); renderAgg(); }
+  if (g === "sp") { ui.spX = cid; drawSP(); }
 });
 
 /* 그래프 설정 */
@@ -108,9 +110,11 @@ document.addEventListener("input", e => {
   const key = e.target.dataset.cfg; if (!key) return;
   const [kind, field] = key.split(".");
   const v = e.target.type === "checkbox" ? e.target.checked : e.target.value;
-  ui.cfg[kind][field] = (field === "lineWidth" || field === "dot" || field === "height")
-    ? (parseFloat(v) || ui.cfg[kind][field]) : v;
-  kind === "ts" ? drawTS() : drawXY();
+  const NUMERIC = ["lineWidth", "dot", "height", "sheight", "lowCut", "highCut"];
+  ui.cfg[kind][field] = NUMERIC.includes(field) ? (parseFloat(v) || ui.cfg[kind][field]) : v;
+  if (kind === "ts") drawTS();
+  else if (kind === "xy") drawXY();
+  else drawSP();
 });
 
 $("tsYMode").onchange = drawTS;
@@ -127,14 +131,14 @@ $("agCsv").onclick = exportCsv;
 
 $("reset").onclick = () => {
   store.tables = []; store.channels = [];
-  ui.tsSel.clear(); ui.xySel.clear(); ui.agSel.clear(); ui.xyX = null;
+  ui.tsSel.clear(); ui.xySel.clear(); ui.agSel.clear(); ui.xyX = null; ui.spX = null;
   ui.range = { mode: "all", tStart: null, tEnd: null, sStart: null, sEnd: null };
   renderFiles(); renderChannels(); renderRangeBar();
 };
 
 let rt;
-window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { drawTS(); drawXY(); }, 120); });
-matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { drawTS(); drawXY(); });
+window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { drawTS(); drawXY(); drawSP(); }, 120); });
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { drawTS(); drawXY(); drawSP(); });
 
 /* ============================================================
    구간 조작
@@ -197,3 +201,42 @@ $("rSEnd").oninput   = () => { ui.range.sEnd   = numOrNull($("rSEnd").value);   
     applyRange();
   });
 })();
+
+/* ============================================================
+   관리기준선 입력
+   ============================================================ */
+
+document.addEventListener("input", e => {
+  const key = e.target.dataset.lim; if (!key) return;
+  applyLimitEdit(key, e.target.value);
+});
+document.addEventListener("change", e => {
+  const key = e.target.dataset.lim;
+  if (key && e.target.tagName === "SELECT") applyLimitEdit(key, e.target.value, true);
+});
+
+function applyLimitEdit(key, value, redrawFields) {
+  const [kind, idx, field] = key.split(".");
+  ui.cfg[kind].limits[+idx][field] = value;
+  if (redrawFields) renderLimitFields(kind);
+  if (kind === "ts") drawTS();
+  else if (kind === "xy") drawXY();
+  else drawSP();
+}
+
+/* ============================================================
+   신호처리
+   ============================================================ */
+
+$("spZero").onchange   = e => { ui.cfg.sp.zero = e.target.value; drawSP(); };
+$("spFilter").onchange = e => {
+  ui.cfg.sp.filter = e.target.value;
+  $("spLowWrap").hidden  = !(ui.cfg.sp.filter === "low"  || ui.cfg.sp.filter === "band");
+  $("spHighWrap").hidden = !(ui.cfg.sp.filter === "high" || ui.cfg.sp.filter === "band");
+  drawSP();
+};
+$("spN").onchange   = e => { ui.cfg.sp.N = +e.target.value; drawSP(); };
+$("spWin").onchange = e => { ui.cfg.sp.win = e.target.value; drawSP(); };
+$("spPng").onclick  = () => saveSpPng("time");
+$("spFPng").onclick = () => saveSpPng("freq");
+$("spCsv").onclick  = exportSpectrumCsv;

@@ -75,6 +75,7 @@ function renderXY(ctx, w, h, th) {
     if (!(ymax > ymin)) { ymax = ymin + 1; ymin -= 1; }
     const p = (ymax - ymin) * 0.06; ymin -= p; ymax += p;
   }
+  if (!norm) [ymin, ymax] = expandForLimits(ymin, ymax, cfg.limits);
   const uMin = numOrNull(cfg.yMin), uMax = numOrNull(cfg.yMax);
   if (uMin !== null) ymin = uMin;
   if (uMax !== null) ymax = uMax;
@@ -120,6 +121,7 @@ function renderXY(ctx, w, h, th) {
     }
   }
   ctx.restore();
+  if (!norm) drawLimits(ctx, { L, T, pw, ph, py }, cfg.limits, th, ymin, ymax);
   return { sets, notes, useTimeColor };
 }
 

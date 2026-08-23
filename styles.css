@@ -135,3 +135,12 @@
 input.box.wide { width:210px; }
 canvas#tsCv { cursor:crosshair; touch-action:pan-y; }
 .rangebar .on { background:var(--lightBg); color:var(--deep); border-radius:12px; padding:5px 10px; font-weight:700; font-size:12.5px; }
+
+/* 관리기준선 입력 */
+.limits { margin-top:14px; border-top:1px dashed var(--divider); padding-top:12px; }
+.limits .hd { font-size:12px; color:var(--textDim); font-weight:700; margin-bottom:8px; }
+.limits .lrow { display:flex; align-items:center; gap:8px; margin-bottom:8px; flex-wrap:wrap; }
+.limits .swatch { width:12px; height:12px; border-radius:3px; flex-shrink:0; }
+.limits input.v { width:110px; }
+.limits input.t { width:130px; }
+.limits select { padding:7px 10px; font-size:13px; }

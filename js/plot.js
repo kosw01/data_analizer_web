@@ -155,3 +155,48 @@ function savePng(kind) {
     downloadBlob(blob, `${name}.png`);
   }, "image/png");
 }
+
+/* ---- 관리기준선 ---- */
+
+/* 값이 들어 있고 축 범위 안에 들어오는 선만 그린다.
+   정규화 축에서는 채널마다 스케일이 달라 기준선이 뜻을 잃으므로 그리지 않는다 */
+function drawLimits(ctx, box, limits, th, ymin, ymax) {
+  const { L, T, pw, ph, py } = box;
+  const drawn = [];
+  ctx.save();
+  ctx.beginPath(); ctx.rect(L, T - 1, pw, ph + 2); ctx.clip();
+  for (const lim of limits || []) {
+    const v = numOrNull(lim.v);
+    if (v === null || v < ymin || v > ymax) continue;
+    const color = (LIMIT_TONES[lim.tone] || LIMIT_TONES.base).color;
+    const y = Math.round(py(v)) + 0.5;
+    ctx.strokeStyle = color; ctx.lineWidth = 1.6; ctx.setLineDash([7, 4]);
+    ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(L + pw, y); ctx.stroke();
+    ctx.setLineDash([]);
+    const text = (lim.label ? lim.label + " " : "") + fmtNum(v, 4);
+    ctx.font = "700 11px -apple-system,sans-serif";
+    const tw = ctx.measureText(text).width;
+    ctx.fillStyle = color; ctx.globalAlpha = 0.14;
+    ctx.fillRect(L + pw - tw - 12, y - 15, tw + 8, 14);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = color; ctx.textAlign = "right"; ctx.textBaseline = "bottom";
+    ctx.fillText(text, L + pw - 8, y - 2);
+    drawn.push(v);
+  }
+  ctx.restore();
+  return drawn.length;
+}
+
+/* 기준선까지 보이도록 Y 범위를 넓힌다 — 선이 화면 밖에 있으면 없는 것과 같다 */
+function expandForLimits(ymin, ymax, limits) {
+  let lo = ymin, hi = ymax;
+  for (const lim of limits || []) {
+    const v = numOrNull(lim.v);
+    if (v === null) continue;
+    if (v < lo) lo = v;
+    if (v > hi) hi = v;
+  }
+  if (lo === ymin && hi === ymax) return [ymin, ymax];
+  const pad = (hi - lo) * 0.05;
+  return [lo - pad, hi + pad];
+}

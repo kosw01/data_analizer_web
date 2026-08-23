@@ -53,6 +53,7 @@ function renderTS(ctx, w, h, th) {
     if (!(ymax > ymin)) { ymax = ymin + 1; ymin -= 1; }
     const pad = (ymax - ymin) * 0.08; ymin -= pad; ymax += pad;
   }
+  if (!norm) [ymin, ymax] = expandForLimits(ymin, ymax, cfg.limits);
   const uMin = numOrNull(cfg.yMin), uMax = numOrNull(cfg.yMax);
   if (uMin !== null) ymin = uMin;
   if (uMax !== null) ymax = uMax;
@@ -98,6 +99,8 @@ function renderTS(ctx, w, h, th) {
   }
   ctx.restore();
 
+  if (!norm) drawLimits(ctx, { L, T, pw, ph, py }, cfg.limits, th, ymin, ymax);
+
   /* 드래그 중인 띠 — 화면에만 그리고 저장물에는 넣지 않는다 */
   if (tsDrag && !th.bg) {
     const a = Math.min(tsDrag.x0, tsDrag.x1), b = Math.max(tsDrag.x0, tsDrag.x1);
@@ -131,7 +134,9 @@ function drawTS() {
     `${r.chs.length}개 채널 · 구간 ${used.toLocaleString()}점 / 전체 ${total.toLocaleString()}점 → 화면 ${shown.toLocaleString()}점 (LTTB) · 렌더 ${(performance.now() - t0).toFixed(1)}ms`
     + (r.mixed ? " · 시간축 없는 채널이 섞여 경과 시간 기준" : "")
     + (!r.norm && r.chs.length > 1 ? " · 스케일이 다르면 개별 축을 쓰세요" : "")
-    + " · 그래프를 좌우로 끌면 구간이 잡힙니다";
+    + " · 그래프를 좌우로 끌면 구간이 잡힙니다"
+    + (r.norm && (ui.cfg.ts.limits || []).some(l => numOrNull(l.v) !== null)
+        ? " · 정규화 축에서는 관리기준선을 그리지 않습니다" : "");
 }
 
 /* 화면 x좌표 → 도메인 값 */

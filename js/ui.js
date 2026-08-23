@@ -79,7 +79,7 @@ function pickHTML(ch, group, checked, disabled) {
 
 function renderSelectors() {
   const has = store.channels.length > 0;
-  ["ts", "xy"].forEach(p => { $(p + "Empty").hidden = has; $(p + "Main").hidden = !has; $(p + "PlotCard").hidden = !has; });
+  ["ts", "xy", "sp"].forEach(p => { $(p + "Empty").hidden = has; $(p + "Main").hidden = !has; $(p + "PlotCard").hidden = !has; });
   $("agEmpty").hidden = has; $("agMain").hidden = !has; $("agTblCard").hidden = !has;
 
   const ids = new Set(store.channels.map(c => c.id));
@@ -88,13 +88,20 @@ function renderSelectors() {
   if (has && !ui.tsSel.size) ui.tsSel.add(store.channels[0].id);
   if (has && !ui.agSel.size) ui.agSel.add(store.channels[0].id);
   if (has && !ui.xyX) ui.xyX = store.channels[0].id;
+  if (ui.spX && !ids.has(ui.spX)) ui.spX = null;
+  if (has && !ui.spX) {
+    const first = store.channels.find(c => canProcess(c).ok);
+    ui.spX = first ? first.id : null;
+  }
 
   $("tsPicks").innerHTML = store.channels.map(c => pickHTML(c, "ts", ui.tsSel.has(c.id))).join("");
   $("xyX").innerHTML = store.channels.map(c => pickHTML(c, "xyX", ui.xyX === c.id)).join("");
   $("xyY").innerHTML = store.channels.map(c => pickHTML(c, "xyY", ui.xySel.has(c.id), c.id === ui.xyX)).join("");
   $("agPicks").innerHTML = store.channels.map(c => pickHTML(c, "ag", ui.agSel.has(c.id))).join("");
 
-  drawTS(); drawXY(); renderAgg(); renderRangeBar();
+  ["ts", "xy", "sp"].forEach(renderLimitFields);
+  renderSPControls();
+  drawTS(); drawXY(); drawSP(); renderAgg(); renderRangeBar();
 }
 
 /* ============================================================
@@ -160,5 +167,59 @@ function renderRangeBar() {
 /* 구간이 바뀌면 세 화면을 함께 다시 그린다 */
 function applyRange() {
   renderRangeBar();
-  drawTS(); drawXY(); renderAgg();
+  drawTS(); drawXY(); drawSP(); renderAgg();
+}
+
+/* ============================================================
+   관리기준선 입력 — 세 그래프가 같은 모양을 쓴다
+   ============================================================ */
+
+function renderLimitFields(kind) {
+  const box = $(kind + "Limits");
+  if (!box) return;
+  const lims = ui.cfg[kind].limits;
+  const opts = Object.entries(LIMIT_TONES)
+    .map(([k, v]) => `<option value="${k}">${v.label}</option>`).join("");
+  box.innerHTML =
+    `<div class="hd">관리기준선 · 최대 4개 · 값을 비우면 그리지 않습니다</div>` +
+    lims.map((l, i) => `
+      <div class="lrow">
+        <span class="swatch" style="background:${LIMIT_TONES[l.tone].color}"></span>
+        <input class="box v" type="number" step="any" placeholder="값" data-lim="${kind}.${i}.v" value="${l.v}">
+        <input class="box t" placeholder="이름 (예: 상한)" data-lim="${kind}.${i}.label" value="${l.label}">
+        <select data-lim="${kind}.${i}.tone">${opts}</select>
+      </div>`).join("");
+  lims.forEach((l, i) => {
+    const sel = box.querySelector(`select[data-lim="${kind}.${i}.tone"]`);
+    if (sel) sel.value = l.tone;
+  });
+}
+
+/* ============================================================
+   신호처리 화면의 선택 항목
+   ============================================================ */
+
+function fillSelect(el, entries, current) {
+  if (!el) return;
+  el.innerHTML = entries.map(([v, label]) => `<option value="${v}">${label}</option>`).join("");
+  el.value = current;
+}
+
+function renderSPControls() {
+  const cfg = ui.cfg.sp;
+  fillSelect($("spZero"), Object.entries(ZERO_MODES), cfg.zero);
+  fillSelect($("spFilter"), Object.entries(FILTER_MODES), cfg.filter);
+  fillSelect($("spN"), WINDOW_SIZES.map(n => [n, n.toLocaleString()]), String(cfg.N));
+  fillSelect($("spWin"), Object.entries(WINDOWS).map(([k, v]) => [k, v.label]), cfg.win);
+  $("spLowWrap").hidden = !(cfg.filter === "low" || cfg.filter === "band");
+  $("spHighWrap").hidden = !(cfg.filter === "high" || cfg.filter === "band");
+
+  /* 등간격이 아닌 채널은 고를 수 없게 막고 이유를 붙인다 */
+  $("spPicks").innerHTML = store.channels.map(c => {
+    const p = canProcess(c);
+    return `<label class="pick" title="${p.ok ? p.why : p.why}">
+      <input type="radio" name="sp" data-g="sp" data-cid="${c.id}"
+        ${ui.spX === c.id ? "checked" : ""} ${p.ok ? "" : "disabled"}>
+      <span><i class="dot" style="background:${c.color}"></i><em>${c.name}</em></span></label>`;
+  }).join("");
 }
