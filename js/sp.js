@@ -194,7 +194,8 @@ function renderSPFreq(ctx, w, h, th) {
 }
 
 function drawSP() {
-  if ($("spPlotCard").hidden) return;
+  const card = $("spPlotCard");
+  if (!card || card.hidden) return;
   computeSP();
   const a = setupCanvas($("spCv"), plotHeight($("spCv"), ui.cfg.sp.ratio));
   renderSPTime(a.ctx, a.w, a.h, themeNow());

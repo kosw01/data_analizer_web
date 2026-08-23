@@ -262,7 +262,8 @@ function renderRegression(ctx, w, h, th, res) {
 }
 
 function drawCable() {
-  if ($("cbPlotCard").hidden) return;
+  const card = $("cbPlotCard");
+  if (!card || card.hidden) return;
   computeCable();
   const c = setupCanvas($("cbCv"), plotHeight($("cbCv"), ui.cfg.cb.ratio));
   renderCable(c.ctx, c.w, c.h, themeNow());
@@ -275,6 +276,7 @@ function drawCable() {
 function renderModeTable() {
   const R0 = cbResult;
   const tbl = $("cbModeTbl");
+  if (!tbl) return;                       // 화면과 코드가 어긋나도 뒤 단계가 멈추지 않게
   if (!R0 || !ui.cbModes) { tbl.innerHTML = ""; return; }
   const k = R0.T ? R0.T.k : null;
   tbl.innerHTML =
@@ -295,6 +297,7 @@ function renderModeTable() {
 function renderCableInfo() {
   const R0 = cbResult;
   const box = $("cbOut"), note = $("cbNote"), props = $("cbProps");
+  if (!box || !note || !props) return;
   if (!R0) { box.innerHTML = ""; note.textContent = ""; props.innerHTML = ""; $("cbAdd").disabled = true; return; }
   const { est, T, mTon, L } = R0;
 
