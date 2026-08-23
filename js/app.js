@@ -37,6 +37,7 @@ async function loadFiles(fileList) {
   }
   $("prog").hidden = true;
   renderFiles(); renderChannels();
+  checkModeFit();
 }
 
 $("pick").onclick = () => $("file").click();
@@ -48,16 +49,25 @@ const drop = $("drop");
 drop.addEventListener("drop", e => { if (e.dataTransfer.files.length) loadFiles(e.dataTransfer.files); });
 
 $("tabs").addEventListener("click", e => {
-  const b = e.target.closest("button"); if (!b) return;
-  ui.page = b.dataset.p;
-  [...$("tabs").children].forEach(x => x.setAttribute("aria-selected", x === b));
-  document.querySelectorAll("section[data-page]").forEach(s => s.hidden = s.dataset.page !== ui.page);
-  renderRangeBar();
-  if (ui.page === "ts") drawTS();
-  if (ui.page === "xy") drawXY();
-  if (ui.page === "sp") drawSP();
-  if (ui.page === "cb") drawCable();
-  if (ui.page === "ag") renderAgg();
+  const b = e.target.closest("button");
+  if (b) gotoTab(b.dataset.p);
+});
+
+/* 진입점 */
+$("entryGrid").addEventListener("click", e => {
+  const b = e.target.closest("button[data-mode]");
+  if (b) applyMode(b.dataset.mode);
+});
+$("modeSwitch").onclick = () => {
+  $("entryCard").hidden = false;
+  $("tabs").hidden = true;
+  $("modeBar").hidden = true;
+  $("rangeBar").hidden = true;
+  document.querySelectorAll("section[data-page]").forEach(s => s.hidden = true);
+};
+$("modeBar").addEventListener("click", e => {
+  const b = e.target.closest("button[data-to]");
+  if (b) { applyMode(b.dataset.to, true); checkModeFit(); }
 });
 
 $("files").addEventListener("click", e => {
@@ -136,7 +146,9 @@ $("reset").onclick = () => {
   store.tables = []; store.channels = [];
   ui.tsSel.clear(); ui.xySel.clear(); ui.agSel.clear(); ui.xyX = null; ui.spX = null; ui.cbX = null; ui.cbList = []; ui.cbModes = []; cbModesKey = "";
   ui.range = { mode: "all", tStart: null, tEnd: null, sStart: null, sEnd: null };
+  landed = false;
   renderFiles(); renderChannels(); renderRangeBar();
+  if (ui.mode) { checkModeFit(); gotoTab("data"); }
 };
 
 let rt;
@@ -315,3 +327,6 @@ $("cbList").addEventListener("click", e => {
     renderCableList(); renderReport();
   }
 });
+
+/* 시작 */
+renderEntry();
