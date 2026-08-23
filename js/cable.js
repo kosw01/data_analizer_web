@@ -69,7 +69,7 @@ function cableTension(modes, mTon, L) {
 
 let cbResult = null;
 let cbModesKey = "";
-const MODE_ROWS = 16;
+const MODE_ROWS = 20;
 
 function cbChannel() {
   const ch = store.channels.find(c => c.id === ui.cbX);
@@ -359,7 +359,7 @@ function renderRegression(ctx, w, h, th, res) {
   const pad = (ymax - ymin) * 0.2 || Math.abs(ymax) * 0.05 || 0.05;
   ymin -= pad; ymax += pad;
 
-  const L = 76, Rr = 16, Tp = 14, B = 42;
+  const L = 78, Rr = 26, Tp = 16, B = 44;
   const pw = w - L - Rr, ph = h - Tp - B;
   const px = x => L + (x - xmin) / (xmax - xmin) * pw;
   const py = y => Tp + (1 - (y - ymin) / (ymax - ymin)) * ph;
@@ -594,7 +594,7 @@ function renderReport() {
     const T = r.T;
     return `<article class="rp">
       <div class="rp-head">
-        <div>
+        <div class="rp-title">
           <div class="rp-t1">Estimation for Cable Tension</div>
           <div class="rp-t2">by Vibration Method</div>
         </div>
@@ -614,12 +614,24 @@ function renderReport() {
       <div class="rp-cols rp-mid">
         <div class="rp-left">
           <h3>□ Vibration Method</h3>
-          <table class="rp-tbl">
-            <thead><tr><th>n</th><th>fn [Hz]</th><th>n²</th><th>(fn/n)²</th><th>T [kN]</th></tr></thead>
-            <tbody>${T.rows.map(x =>
-              `<tr><td>${x.n}</td><td>${x.f.toFixed(4)}</td><td>${x.n2}</td><td>${x.y.toFixed(5)}</td><td>${x.T === null ? "—" : x.T.toFixed(2)}</td></tr>`
-            ).join("")}</tbody>
-          </table>
+          <div class="rp-tblbox">
+            <table class="rp-tbl">
+              <thead><tr><th>n</th><th>fn [Hz]</th><th>n²</th><th>(fn/n)²</th><th>T [kN]</th></tr></thead>
+              <tbody>${(() => {
+                /* 차수 칸을 20개로 고정한다. 쓰지 않은 차수는 비워 둔다 —
+                   표 높이가 늘 같아야 옆 그래프와 나란히 맞는다 */
+                const byN = new Map(T.rows.map(x => [x.n, x]));
+                const out = [];
+                for (let n = 1; n <= 20; n++) {
+                  const x = byN.get(n);
+                  out.push(x
+                    ? `<tr><td>${n}</td><td>${x.f.toFixed(4)}</td><td>${x.n2}</td><td>${x.y.toFixed(5)}</td><td>${x.T === null ? "—" : x.T.toFixed(2)}</td></tr>`
+                    : `<tr class="void"><td>${n}</td><td></td><td></td><td></td><td></td></tr>`);
+                }
+                return out.join("");
+              })()}</tbody>
+            </table>
+          </div>
         </div>
         <figure class="rp-right">
           <img src="${r.verticalPng}" alt="스펙트럼">
@@ -639,6 +651,14 @@ function renderReport() {
             <tr class="hl"><th>Tension by Multi-Mode</th><td>${T.multi === null ? "—" : T.multi.toFixed(3)}</td><td>[kN]</td></tr>
             <tr class="hl"><th>Tension by Multi-Mode</th><td>${T.multiTonf === null ? "—" : T.multiTonf.toFixed(3)}</td><td>[Tonf]</td></tr>
           </table>
+          <div class="rp-eq">
+            <div><span class="lab">차수별</span> T<sub>n</sub> = 4 m L² (f<sub>n</sub>/n)²</div>
+            <div><span class="lab">Single Mode</span> T = 4 m L² · mean[(f<sub>n</sub>/n)²]</div>
+            <div><span class="lab">회귀</span> (f<sub>n</sub>/n)² = a + b·n²</div>
+            <div><span class="lab">Multi-Mode</span> T = 4 m L² · a</div>
+            <div><span class="lab">휨강성</span> EI = b · 4 m L⁴ / π²</div>
+            <div class="unit">m [ton/m] · L [m] · f [Hz] → T [kN] · 1 Tonf = 9.80665 kN</div>
+          </div>
         </div>
         <figure class="rp-right2">
           <img src="${r.regPng}" alt="회귀">

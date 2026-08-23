@@ -22,7 +22,10 @@ function fmtNum(v, d = 4) {
   if (!isFinite(v)) return "—";
   const a = Math.abs(v);
   if (a !== 0 && (a < 1e-3 || a >= 1e6)) return v.toExponential(2);
-  return v.toFixed(d).replace(/\.?0+$/, "");
+  const s = v.toFixed(d);
+  /* 소수점이 있을 때만 끝자리 0을 지운다.
+     그냥 지우면 100 이 "1", 50 이 "5" 가 되어 축 눈금이 통째로 틀린다 */
+  return s.indexOf(".") >= 0 ? s.replace(/\.?0+$/, "") : s;
 }
 function fmtDur(ms) {
   if (ms < 1000) return ms.toFixed(0) + "ms";

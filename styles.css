@@ -176,14 +176,18 @@ input.box.mini { width:96px; padding:5px 8px; font-size:13px; border-radius:8px;
 }
 #cbReport { overflow-x:auto; }
 
-.rp-head { display:flex; justify-content:space-between; align-items:flex-start; gap:16px;
-           border-bottom:2px solid #191F28; padding-bottom:7px; margin-bottom:8px; flex-shrink:0; }
-.rp-t1 { font-size:16px; font-weight:700; letter-spacing:-0.2px; }
-.rp-t2 { font-size:12px; color:#4E5968; }
-.rp-id { border-collapse:collapse; font-size:11px; }
-.rp-id th { background:#F2F4F6; color:#4E5968; font-weight:700; padding:3px 8px;
-            border:1px solid #E5E8EB; text-align:left; white-space:nowrap; }
-.rp-id td { padding:3px 10px; border:1px solid #E5E8EB; white-space:nowrap; text-align:right; }
+/* 머리말이 지면보다 넓어지면 오른쪽이 통째로 잘린다. 폭을 못 박는다 */
+.rp-head { display:flex; justify-content:space-between; align-items:flex-start; gap:14px;
+           border-bottom:2px solid #191F28; padding-bottom:7px; margin-bottom:8px;
+           flex-shrink:0; overflow:hidden; }
+.rp-title { min-width:0; flex:1; }
+.rp-t1 { font-size:15px; font-weight:700; letter-spacing:-0.3px; white-space:nowrap; }
+.rp-t2 { font-size:11.5px; color:#4E5968; }
+.rp-id { border-collapse:collapse; font-size:10.5px; table-layout:fixed; width:326px; flex-shrink:0; }
+.rp-id th { background:#F2F4F6; color:#4E5968; font-weight:700; padding:3px 7px;
+            border:1px solid #E5E8EB; text-align:left; white-space:nowrap; width:62px; }
+.rp-id td { padding:3px 8px; border:1px solid #E5E8EB; text-align:right; width:101px;
+            overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
 .rp-props { display:flex; flex-wrap:wrap; gap:4px 16px; font-size:11px; color:#4E5968;
             margin-bottom:8px; flex-shrink:0; }
@@ -202,11 +206,14 @@ input.box.mini { width:96px; padding:5px 8px; font-size:13px; border-radius:8px;
 .rp-cols figcaption { font-size:9.5px; color:#8B95A1; margin-top:3px; text-align:center; flex-shrink:0; }
 
 .rp-kv, .rp-tbl { border-collapse:collapse; font-size:11px; }
-.rp-kv th { text-align:left; font-weight:500; color:#4E5968; padding:2.5px 12px 2.5px 0; white-space:nowrap; }
-.rp-kv td { padding:2.5px 9px; text-align:right; white-space:nowrap; }
+.rp-kv th { text-align:left; font-weight:500; color:#4E5968; padding:2px 12px 2px 0; white-space:nowrap; }
+.rp-kv td { padding:2px 9px; text-align:right; white-space:nowrap; }
 .rp-kv td:last-child { text-align:left; color:#8B95A1; }
 .rp-kv tr.hl th, .rp-kv tr.hl td { font-weight:700; background:#E3F0FC; }
-.rp-tbl { width:100%; }
+/* 20행이 칸 높이를 꽉 채우게 늘린다. 옆 그래프와 아래끝이 맞는다 */
+.rp-tblbox { flex:1; min-height:0; display:flex; }
+.rp-tbl { width:100%; height:100%; table-layout:fixed; }
+.rp-tbl tr.void td { color:#C9CED4; background:#FCFCFD; }
 /* 화면용 표의 sticky 가 인쇄에서 머리글을 아래로 밀어버린다. 여기서는 끈다 */
 .rp-tbl thead th, .rp-tbl th, .rp-tbl td { position:static !important; }
 .rp-tbl th { background:#F2F4F6; border:1px solid #E5E8EB; padding:3px 8px;
@@ -214,6 +221,12 @@ input.box.mini { width:96px; padding:5px 8px; font-size:13px; border-radius:8px;
 .rp-tbl th:first-child { text-align:center; }
 .rp-tbl td { border:1px solid #E5E8EB; padding:2px 8px; text-align:right; background:#fff; }
 .rp-tbl td:first-child { text-align:center; font-weight:600; }
+
+.rp-eq { margin-top:7px; font-size:9.5px; color:#4E5968; line-height:1.55;
+         border-left:2px solid #E5E8EB; padding-left:9px; }
+.rp-eq .lab { display:inline-block; width:64px; color:#8B95A1; font-weight:700; }
+.rp-eq sub { font-size:7.5px; }
+.rp-eq .unit { margin-top:2px; color:#8B95A1; font-size:9px; }
 
 .rp-foot { margin-top:auto; padding-top:6px; border-top:1px solid #E5E8EB;
            font-size:9.5px; color:#8B95A1; text-align:right; flex-shrink:0; }
