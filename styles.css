@@ -158,46 +158,43 @@ input.box.mini { width:96px; padding:5px 8px; font-size:13px; border-radius:8px;
 #cbModeTbl td:first-child, #cbModeTbl th:first-child { text-align:center; }
 
 /* 보고서 — A4 한 쪽에 칸을 고정한다.
-   화면은 px, 인쇄는 mm 를 쓰되 각 칸의 비율은 같게 맞춘다.
-   그래야 캔버스로 그린 그림이 늘어나거나 눌리지 않는다. */
+   .rp 자체가 곧 인쇄 가능 영역이다. 안쪽 여백을 두지 않아야
+   화면 미리보기와 인쇄 결과의 높이가 어긋나지 않는다.
+   높이는 인쇄 영역(273mm)보다 1mm 작게 잡는다 — 딱 맞추면
+   반올림 오차로 한 줄이 넘쳐 빈 페이지가 따라붙는다. */
 .rp {
-  --page-w: 703px;   /* 186mm @96dpi */
-  --page-h: 1032px;  /* 273mm */
-  --mid-h: 470px;
-  --bot-h: 260px;
-  --spec-w: 232px;
-  --reg-w: 372px;
+  --page-w: 703px;  --page-h: 1028px;   /* 186 x 272mm @96dpi */
+  --mid-h: 578px;   --bot-h: 298px;
+  --spec-w: 232px;  --reg-w: 372px;
   width: var(--page-w); height: var(--page-h);
   box-sizing: border-box;
-  background:#fff; color:#191F28; border:1px solid #E5E8EB; border-radius:10px;
-  padding:18px 20px; margin:0 auto 18px;
-  display:flex; flex-direction:column;
+  background:#fff; color:#191F28; border:1px solid #E5E8EB;
+  padding:0; margin:0 auto 20px;
+  display:flex; flex-direction:column; overflow:hidden;
   font-variant-numeric:tabular-nums;
 }
-#cbReport { overflow-x:auto; }
+#cbReport { overflow-x:auto; padding:2px; }
 
-/* 머리말이 지면보다 넓어지면 오른쪽이 통째로 잘린다. 폭을 못 박는다 */
-.rp-head { display:flex; justify-content:space-between; align-items:flex-start; gap:14px;
-           border-bottom:2px solid #191F28; padding-bottom:7px; margin-bottom:8px;
-           flex-shrink:0; overflow:hidden; }
-.rp-title { min-width:0; flex:1; }
-.rp-t1 { font-size:15px; font-weight:700; letter-spacing:-0.3px; white-space:nowrap; }
-.rp-t2 { font-size:11.5px; color:#4E5968; }
-.rp-id { border-collapse:collapse; font-size:10.5px; table-layout:fixed; width:326px; flex-shrink:0; }
-.rp-id th { background:#F2F4F6; color:#4E5968; font-weight:700; padding:3px 7px;
-            border:1px solid #E5E8EB; text-align:left; white-space:nowrap; width:62px; }
-.rp-id td { padding:3px 8px; border:1px solid #E5E8EB; text-align:right; width:101px;
+/* 머리말 — 식별표를 제목 아래 전체 폭에 둔다. 옆에 두면 지면 밖으로 밀려 잘린다 */
+.rp-head { border-bottom:2px solid #191F28; padding-bottom:6px; margin-bottom:7px;
+           flex-shrink:0; height:96px; box-sizing:border-box; }
+.rp-t1 { font-size:17px; font-weight:700; letter-spacing:-0.3px; white-space:nowrap; }
+.rp-t2 { font-size:12px; color:#4E5968; margin-bottom:7px; }
+.rp-id { border-collapse:collapse; font-size:11px; table-layout:fixed; width:100%; }
+.rp-id th { background:#F2F4F6; color:#4E5968; font-weight:700; padding:4px 8px;
+            border:1px solid #E5E8EB; text-align:left; white-space:nowrap; width:11%; }
+.rp-id td { padding:4px 9px; border:1px solid #E5E8EB; text-align:right; width:14%;
             overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
-.rp-props { display:flex; flex-wrap:wrap; gap:4px 16px; font-size:11px; color:#4E5968;
-            margin-bottom:8px; flex-shrink:0; }
-.rp-props b { color:#8B95A1; font-weight:600; margin-right:3px; }
+.rp-props { display:flex; flex-wrap:wrap; gap:3px 16px; font-size:10.5px; color:#4E5968;
+            height:20px; align-items:center; flex-shrink:0; overflow:hidden; }
+.rp-props b { color:#8B95A1; font-weight:700; margin-right:3px; }
 
 .rp h3 { font-size:12px; font-weight:700; margin:0 0 5px; color:#191F28; flex-shrink:0; }
 
 .rp-cols { display:flex; gap:14px; align-items:stretch; flex-shrink:0; }
 .rp-mid { height: var(--mid-h); }
-.rp-bottom { height: var(--bot-h); margin-top:12px; }
+.rp-bottom { height: var(--bot-h); margin-top:14px; }
 .rp-left { flex:1; min-width:0; display:flex; flex-direction:column; }
 .rp-right  { width: var(--spec-w); flex-shrink:0; margin:0; display:flex; flex-direction:column; }
 .rp-right2 { width: var(--reg-w);  flex-shrink:0; margin:0; display:flex; flex-direction:column; }
@@ -205,11 +202,13 @@ input.box.mini { width:96px; padding:5px 8px; font-size:13px; border-radius:8px;
                       border:1px solid #E5E8EB; border-radius:5px; display:block; }
 .rp-cols figcaption { font-size:9.5px; color:#8B95A1; margin-top:3px; text-align:center; flex-shrink:0; }
 
-.rp-kv, .rp-tbl { border-collapse:collapse; font-size:11px; }
-.rp-kv th { text-align:left; font-weight:500; color:#4E5968; padding:2px 12px 2px 0; white-space:nowrap; }
-.rp-kv td { padding:2px 9px; text-align:right; white-space:nowrap; }
-.rp-kv td:last-child { text-align:left; color:#8B95A1; }
+.rp-kv, .rp-tbl { border-collapse:collapse; font-size:11.5px; }
+.rp-kv { width:100%; }
+.rp-kv th { text-align:left; font-weight:500; color:#4E5968; padding:3px 12px 3px 0; white-space:nowrap; }
+.rp-kv td { padding:3px 9px; text-align:right; white-space:nowrap; }
+.rp-kv td:last-child { text-align:left; color:#8B95A1; width:52px; }
 .rp-kv tr.hl th, .rp-kv tr.hl td { font-weight:700; background:#E3F0FC; }
+
 /* 20행이 칸 높이를 꽉 채우게 늘린다. 옆 그래프와 아래끝이 맞는다 */
 .rp-tblbox { flex:1; min-height:0; display:flex; }
 .rp-tbl { width:100%; height:100%; table-layout:fixed; }
@@ -218,38 +217,41 @@ input.box.mini { width:96px; padding:5px 8px; font-size:13px; border-radius:8px;
 .rp-tbl thead th, .rp-tbl th, .rp-tbl td { position:static !important; }
 .rp-tbl th { background:#F2F4F6; border:1px solid #E5E8EB; padding:3px 8px;
              font-weight:700; color:#4E5968; text-align:right; }
-.rp-tbl th:first-child { text-align:center; }
+.rp-tbl th:first-child { text-align:center; width:34px; }
 .rp-tbl td { border:1px solid #E5E8EB; padding:2px 8px; text-align:right; background:#fff; }
 .rp-tbl td:first-child { text-align:center; font-weight:600; }
 
-.rp-eq { margin-top:7px; font-size:9.5px; color:#4E5968; line-height:1.55;
-         border-left:2px solid #E5E8EB; padding-left:9px; }
-.rp-eq .lab { display:inline-block; width:64px; color:#8B95A1; font-weight:700; }
-.rp-eq sub { font-size:7.5px; }
-.rp-eq .unit { margin-top:2px; color:#8B95A1; font-size:9px; }
+.rp-eq { margin-top:9px; font-size:10px; color:#4E5968; line-height:1.85;
+         border-left:2px solid #E5E8EB; padding-left:10px; }
+.rp-eq .lab { display:inline-block; width:66px; color:#8B95A1; font-weight:700; }
+.rp-eq sub { font-size:8px; }
+.rp-eq .unit { margin-top:3px; color:#8B95A1; font-size:9.5px; }
 
 .rp-foot { margin-top:auto; padding-top:6px; border-top:1px solid #E5E8EB;
-           font-size:9.5px; color:#8B95A1; text-align:right; flex-shrink:0; }
+           font-size:9.5px; color:#8B95A1; text-align:right; flex-shrink:0; height:22px;
+           box-sizing:border-box; }
 
 /* 인쇄: 보고서만 남기고 라이트 고정 */
 @media print {
   @page { size:A4 portrait; margin:12mm; }
-  body { background:#fff !important; color:#191F28 !important; }
-  .wrap { max-width:none; padding:0; }
+  html, body { background:#fff !important; color:#191F28 !important; margin:0; padding:0; }
+  .wrap { max-width:none; padding:0; margin:0; }
   header, nav, .rangebar, .no-print,
   section:not([data-page="cb"]),
   #cbEmpty, #cbMain, #cbPlotCard, #cbListCard { display:none !important; }
-  #cbReportCard { background:#fff !important; padding:0 !important; margin:0 !important; border-radius:0; }
+  #cbReportCard { background:#fff !important; padding:0 !important; margin:0 !important;
+                  border:none; border-radius:0; }
+  #cbReport { overflow:visible; padding:0; }
   .rp {
-    --page-w: 186mm; --page-h: 273mm;
-    --mid-h: 124mm;  --bot-h: 69mm;
-    --spec-w: 61mm;  --reg-w: 98mm;
+    --page-w: 186mm; --page-h: 272mm;
+    --mid-h: 152.9mm; --bot-h: 78.8mm;
+    --spec-w: 61.4mm; --reg-w: 98.4mm;
     border:none; border-radius:0; padding:0; margin:0;
-    break-after:page; page-break-after:always;
     break-inside:avoid; page-break-inside:avoid;
+    break-after:page; page-break-after:always;
   }
+  /* 마지막 장에는 페이지 나눔을 걸지 않는다. 걸면 빈 장이 따라붙는다 */
+  .rp:last-child { break-after:auto; page-break-after:auto; }
   .rp-cols, .rp-tbl, .rp-kv, .rp-cols figure { break-inside:avoid; page-break-inside:avoid; }
   .rp-tbl thead { display:table-header-group; }
-  .rp:last-child { break-after:auto; page-break-after:auto; }
-  .rp-figs img { border-color:#ccc; }
 }

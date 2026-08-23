@@ -496,11 +496,10 @@ function snapshot(renderFn, ratio, extra) {
 /* 보고서 지면 규격 (px). A4 세로 210×297mm 에서 여백 12mm 를 뺀 186×273mm 를
    96dpi 기준 px 로 환산한 값이다. 화면과 인쇄가 같은 비율을 쓰게 하려고 한곳에 모아둔다 */
 const RP = {
-  pageW: 703, pageH: 1032,
-  midH: 470,          // 차수 표 + 세로 스펙트럼 줄
-  botH: 260,          // 결과 표 + 회귀 그래프 줄
-  specW: 232, specH: 470,
-  regW: 372, regH: 260
+  pageW: 703, pageH: 1028,     // 186 x 272mm. 인쇄 영역(273mm)보다 1mm 작게 —
+  midH: 578, botH: 298,        // 딱 맞추면 반올림으로 넘쳐 빈 페이지가 생긴다
+  specW: 232, specH: 578,
+  regW: 372, regH: 298
 };
 
 /* 크기를 직접 정해 그린다. 보고서 칸 모양에 맞춰야 해서 비율만으로는 부족하다 */
@@ -594,13 +593,15 @@ function renderReport() {
     const T = r.T;
     return `<article class="rp">
       <div class="rp-head">
-        <div class="rp-title">
-          <div class="rp-t1">Estimation for Cable Tension</div>
-          <div class="rp-t2">by Vibration Method</div>
-        </div>
+        <div class="rp-t1">Estimation for Cable Tension</div>
+        <div class="rp-t2">by Vibration Method</div>
         <table class="rp-id">
-          <tr><th>Bridge</th><td>${r.bridge || "—"}</td><th>Leff</th><td>${r.L} m</td></tr>
-          <tr><th>Cable No.</th><td>${r.name}</td><th>m</th><td>${r.mIn} ${r.unitLabel}</td></tr>
+          <tr>
+            <th>Bridge</th><td>${r.bridge || "—"}</td>
+            <th>Cable No.</th><td>${r.name}</td>
+            <th>Leff</th><td>${r.L} m</td>
+            <th>m</th><td>${r.mIn} ${r.unitLabel}</td>
+          </tr>
         </table>
       </div>
 
@@ -609,6 +610,7 @@ function renderReport() {
         <span><b>m</b> ${r.mTon === null ? "—" : r.mTon.toFixed(5)} ton/m</span>
         <span><b>Leff</b> ${r.L} m</span>
         <span><b>사용 차수</b> ${T.count}개</span>
+        <span><b>출처</b> ${r.source}</span>
       </div>
 
       <div class="rp-cols rp-mid">
@@ -666,7 +668,7 @@ function renderReport() {
         </figure>
       </div>
 
-      <div class="rp-foot">${r.source} · 작성 ${stamp}</div>
+      <div class="rp-foot">작성 ${stamp}</div>
     </article>`;
   }).join("");
 }
