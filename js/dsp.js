@@ -9,7 +9,7 @@
    ============================================================ */
 
 const ZERO_MODES = {
-  none:   "없음",
+  none:   "맞추지 않음",
   mean:   "평균 제거",
   first:  "첫 값을 0으로",
   detrend:"선형 추세 제거"
@@ -92,7 +92,7 @@ function filtfilt(x, kind, fc, fs) {
   return biquadOnce(biquadOnce(x, c, false), c, true);
 }
 
-const FILTER_MODES = { none:"없음", low:"저역통과 (LPF)", high:"고역통과 (HPF)", band:"대역통과" };
+const FILTER_MODES = { none:"필터 없음", low:"저역통과 (LPF)", high:"고역통과 (HPF)", band:"대역통과" };
 
 /* 차단주파수는 나이퀴스트보다 낮아야 한다 */
 function applyFilter(data, fs, mode, lowCut, highCut) {
@@ -279,67 +279,106 @@ function findPeaks(sp, count, winType, opts) {
    f1 후보는 "각 봉우리 ÷ 1..8" 이고, 낮은 차수가 실제로 보이는 쪽을 선호한다 */
 /* f1 후보 하나를 채점한다.
 
-   두 가지를 조심한다.
+   **두 번 맞춘다.**
+   1차로 정수배 자리를 찾아 연속 구간을 얻고, 그 구간으로
+   (fn/n)² = a + b·n² 를 세워 다시 맞춘다.
+   휨강성 때문에 고차가 정수배보다 커지므로, 정수배만 보면
+   5차 위쪽을 통째로 놓친다 (실측에서 13차가 2.2Hz 벌어졌다).
+
+   채점에서 조심한 것 둘 —
    1) 차수 하나에 봉우리 하나만 센다. 안 그러면 잡음 봉우리 여러 개가
       모두 "1차"로 계산되어 터무니없이 큰 f1이 최고점을 받는다.
    2) 점수는 "가장 긴 연속 차수 구간"으로 낸다. 멀리 떨어진 잡음 차수
       하나가 끼면(예: 1,2,3,4,5,10) 간격 벌점이 정답을 짓누른다. */
-function scoreFundamental(sortedFreqs, f1, MAXN) {
-  if (!(f1 > 0)) return null;
-  const bestPerOrder = new Map();
-  for (const f of sortedFreqs) {
-    const k = Math.round(f / f1);
-    if (k < 1 || k > MAXN + 4) continue;
-    const e = Math.abs(f - k * f1) / f1;
-    if (e >= 0.06) continue;
-    if (!bestPerOrder.has(k) || e < bestPerOrder.get(k)) bestPerOrder.set(k, e);
-  }
-  const all = [...bestPerOrder.keys()].sort((a, b) => a - b);
-  if (!all.length) return null;
+const F1_TOL = 0.06;          // 배음으로 인정할 상대오차
+const F1_MAXN = 12;
 
-  let run = [all[0]], bestRun = run;
-  for (let i = 1; i < all.length; i++) {
-    if (all[i] === all[i - 1] + 1) run.push(all[i]);
-    else run = [all[i]];
-    if (run.length > bestRun.length) bestRun = run;
-  }
+function scoreFundamental(sortedFreqs, seed) {
+  if (!(seed > 0)) return null;
 
-  const matched = bestRun.length;
-  const err = bestRun.reduce((a, k) => a + bestPerOrder.get(k), 0) / matched;
-  const extras = all.length - matched;
-  const lowBonus = bestRun[0] === 1 ? 0.6 : (bestRun[0] === 2 ? 0.25 : 0);
-
-  /* 연속 차수들로 f1을 최소제곱으로 다시 맞춘다.
-     봉우리 하나를 차수로 나눈 값보다 정확하고, 높은 차수일수록 무게가 실린다 */
-  let sNF = 0, sNN = 0;
-  for (const k of bestRun) {
-    const target = k * f1;
-    let closest = null, best = Infinity;
+  /* predict(k) 자리에 가장 가까운 봉우리를 차수마다 하나씩 붙인다 */
+  function match(predict) {
+    const bp = new Map();
     for (const f of sortedFreqs) {
-      const dd = Math.abs(f - target);
-      if (dd < best) { best = dd; closest = f; }
+      let bestK = 0, bestD = Infinity;
+      for (let k = 1; k <= F1_MAXN; k++) {
+        const d = Math.abs(f - predict(k));
+        if (d < bestD) { bestD = d; bestK = k; }
+      }
+      if (!bestK) continue;
+      const e = bestD / seed;
+      if (e >= F1_TOL) continue;
+      if (!bp.has(bestK) || e < bp.get(bestK).err) bp.set(bestK, { err: e, freq: f });
     }
-    sNF += k * closest; sNN += k * k;
+    return bp;
   }
-  const refined = sNN ? sNF / sNN : f1;
+
+  function longestRun(bp) {
+    const all = [...bp.keys()].sort((a, b) => a - b);
+    if (!all.length) return [];
+    let run = [all[0]], best = run;
+    for (let i = 1; i < all.length; i++) {
+      if (all[i] === all[i - 1] + 1) run.push(all[i]);
+      else run = [all[i]];
+      if (run.length > best.length) best = run;
+    }
+    return best;
+  }
+
+  /* (fn/n)² 를 n² 에 회귀해 (절편, 기울기) 를 낸다 */
+  function fit(bp, orders) {
+    if (orders.length < 2) return null;
+    let sx = 0, sy = 0, sxx = 0, sxy = 0;
+    for (const k of orders) {
+      const x = k * k, fk = bp.get(k).freq;
+      const y = (fk / k) * (fk / k);
+      sx += x; sy += y; sxx += x * x; sxy += x * y;
+    }
+    const m = orders.length, den = m * sxx - sx * sx;
+    if (!den) return null;
+    const b = (m * sxy - sx * sy) / den;
+    return { a: (sy - b * sx) / m, b };
+  }
+
+  let bp = match(k => k * seed);
+  if (!bp.size) return null;
+  let run = longestRun(bp);
+
+  const ab0 = fit(bp, run);
+  if (ab0 && ab0.a > 0) {
+    const bp2 = match(k => k * Math.sqrt(Math.max(ab0.a + ab0.b * k * k, 1e-12)));
+    if (bp2.size > bp.size) { bp = bp2; run = longestRun(bp); }
+  }
+  if (!run.length) return null;
+
+  const matched = run.length;
+  const err = run.reduce((a, k) => a + bp.get(k).err, 0) / matched;
+  const extras = bp.size - matched;
+  const lowBonus = run[0] === 1 ? 0.6 : (run[0] === 2 ? 0.25 : 0);
+
+  /* f1 은 드리프트 모형의 절편에서 낸다.
+     정수배를 가정해 평균 내면 드리프트된 고차에 끌려 3% 넘게 높아진다 */
+  let refined = seed;
+  const ab = fit(bp, run);
+  if (ab && ab.a > 0) refined = Math.sqrt(ab.a);
+  else if (run.length) refined = bp.get(run[0]).freq / run[0];
 
   return {
-    f1: refined, seed: f1, matched, orders: bestRun, allOrders: all, meanErr: err,
-    /* 오차를 무겁게 본다. 느슨하게 맞은 봉우리가 개수로 점수를 뒤집던 문제가 있었다 */
-    score: matched - 8 * err + 0.05 * extras + lowBonus,
-    extrapolated: bestRun[0] > 2
+    f1: refined, seed, matched, orders: run,
+    allOrders: [...bp.keys()].sort((a, b) => a - b), meanErr: err,
+    score: matched - 4 * err + 0.1 * extras + lowBonus,
+    extrapolated: run[0] > 2
   };
 }
 
-function estimateFundamental(peaks, maxOrder) {
+function estimateFundamental(peaks) {
   const fs = peaks.map(p => p.freq).filter(f => f > 0).sort((a, b) => a - b);
   if (!fs.length) return null;
-  const MAXN = maxOrder || 8;
 
   let best = null;
   for (const p of fs) {
-    for (let n = 1; n <= MAXN; n++) {
-      const c = scoreFundamental(fs, p / n, MAXN);
+    for (let n = 1; n <= 8; n++) {
+      const c = scoreFundamental(fs, p / n);
       if (c && (!best || c.score > best.score + 1e-9)) best = c;
     }
   }
@@ -348,7 +387,7 @@ function estimateFundamental(peaks, maxOrder) {
   /* 부조화 확인. f1의 절반·1/3도 배음 열에 얹히므로 그냥 최고점을 쓰면
      장력이 1/4, 1/9로 나온다. 정수배를 다시 채점해 거의 같은 점수면 큰 쪽을 쓴다 */
   for (const k of [2, 3]) {
-    const up = scoreFundamental(fs, best.f1 * k, MAXN);
+    const up = scoreFundamental(fs, best.f1 * k);
     if (up && up.score >= best.score - 0.3) best = up;
   }
   return best;

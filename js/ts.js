@@ -37,7 +37,7 @@ function renderTS(ctx, w, h, th) {
     return { series, chs, mixed, norm, empty: true };
   }
 
-  let xmin = Infinity, xmax = -Infinity;
+  const xmin = Infinity, xmax = -Infinity;
   for (const s of series) for (const [x] of s.pts) { if (x < xmin) xmin = x; if (x > xmax) xmax = x; }
   if (!(xmax > xmin)) xmax = xmin + 1;
 

@@ -264,17 +264,3 @@ input.box.mini { width:96px; padding:5px 8px; font-size:13px; border-radius:8px;
   .rp-tbl thead { display:table-header-group; }
 }
 
-/* 진입점 */
-.entry-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
-@media (max-width:640px) { .entry-grid { grid-template-columns:1fr; } }
-.entry-btn { text-align:left; background:var(--chipBg); border:2px solid transparent;
-  border-radius:16px; padding:20px; cursor:pointer; font-family:inherit; color:var(--textStrong);
-  display:flex; flex-direction:column; gap:5px; }
-.entry-btn:hover { border-color:var(--main); background:var(--lightBg); }
-.entry-btn .t { font-size:17px; font-weight:700; }
-.entry-btn .d { font-size:13px; color:var(--textNormal); }
-.entry-btn .h { font-size:12px; color:var(--textDim); }
-
-.modebar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
-.mtag { background:var(--lightBg); color:var(--deep); border-radius:10px;
-        padding:5px 11px; font-size:13px; font-weight:700; }

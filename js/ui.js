@@ -74,9 +74,10 @@ function renderChannels() {
   renderSelectors();
   /* 채널이 처음 생기면 모드에 맞는 화면으로 데려간다.
      한 번만 한다 — 이후에는 사용자가 있던 탭에 머물러야 한다 */
-  if (!landed && store.channels.length && ui.mode && ui.page === "data") {
+  // 채널이 처음 생기면 시계열로 데려간다. 한 번만 한다.
+  if (!landed && store.channels.length && ui.page === "data") {
     landed = true;
-    gotoTab(MODES[ui.mode].landing);
+    gotoTab("ts");
   }
 }
 
@@ -275,47 +276,8 @@ function renderCableControls() {
   renderCableList();
 }
 
-/* ============================================================
-   진입점 — 모드에 따라 탭 순서와 기본값을 잡는다
-   ============================================================ */
-
+/* 탭 이동 */
 const TAB_LABEL = { data:"데이터", ts:"시계열", xy:"상관", sp:"신호처리", cb:"케이블 장력", ag:"분석" };
-
-function renderEntry() {
-  $("entryGrid").innerHTML = Object.entries(MODES).map(([k, m]) => `
-    <button class="entry-btn" data-mode="${k}">
-      <span class="t">${m.label}</span>
-      <span class="d">${m.desc}</span>
-      <span class="h">${m.hint}</span>
-    </button>`).join("");
-}
-
-function applyMode(key, keepPage) {
-  const m = MODES[key];
-  if (!m) return;
-  ui.mode = key;
-
-  /* 탭을 모드 순서대로 다시 늘어놓는다. 목록은 같고 순서만 바뀐다 */
-  const nav = $("tabs");
-  const byId = {};
-  [...nav.children].forEach(b => { byId[b.dataset.p] = b; });
-  m.tabs.forEach(p => { if (byId[p]) nav.appendChild(byId[p]); });
-
-  const d = m.defaults;
-  if ($("agUnit")) $("agUnit").value = d.agUnit;
-  ui.cfg.sp.N = d.spN;
-  ui.cfg.cb.N = d.cbN;
-  if ($("tsYMode")) $("tsYMode").value = d.tsYMode;
-
-  $("entryCard").hidden = true;
-  nav.hidden = false;
-  $("modeBar").hidden = false;
-  $("modeTag").textContent = m.label;
-  $("modeHint").textContent = m.hint;
-
-  if (!keepPage) gotoTab(store.channels.length ? m.landing : "data");
-  renderSPControls(); renderCableControls();
-}
 
 function gotoTab(p) {
   ui.page = p;
@@ -327,21 +289,4 @@ function gotoTab(p) {
   if (p === "sp") drawSP();
   if (p === "cb") drawCable();
   if (p === "ag") renderAgg();
-}
-
-/* 넣은 파일이 고른 모드와 어긋나면 알려준다. 강제로 바꾸지는 않는다 */
-function checkModeFit() {
-  const box = $("modeHint");
-  if (!ui.mode || !store.tables.length) return;
-  const uniform = store.tables.filter(t => t.time && t.time.kind === "uniform" && t.time.sampleRate >= 1).length;
-  const irregular = store.tables.filter(t => t.times && t.time.kind === "irregular").length;
-  const m = MODES[ui.mode];
-
-  let msg = m.hint, other = null;
-  if (ui.mode === "raw" && irregular && !uniform) { other = "stat"; msg = "불규칙 시간축 파일입니다 — 통계 데이터에 가깝습니다"; }
-  if (ui.mode === "stat" && uniform && !irregular) { other = "raw"; msg = "등간격 고속 수집 파일입니다 — 원시 데이터에 가깝습니다"; }
-
-  box.innerHTML = other
-    ? `${msg} <button class="b btn-ghost btn-sm" id="modeFix" data-to="${other}">${MODES[other].label}로 바꾸기</button>`
-    : msg;
 }

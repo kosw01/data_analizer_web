@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="파일 앱의 계측 데이터를 불러와 시계열·상관 그래프와 기간 통계를 만드는 도구">
 <title>데이터 분석</title>
-<link rel="stylesheet" href="styles.css?v=15">
+<link rel="stylesheet" href="styles.css?v=16">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
@@ -21,14 +21,8 @@
   </header>
 
 
-  <!-- 진입점 — 모드를 고르기 전에는 이것만 보인다 -->
-  <div class="card entry" id="entryCard">
-    <h2 style="margin-bottom:6px">무엇을 보시겠습니까</h2>
-    <p class="muted" style="margin:0 0 18px">고른 쪽에 맞춰 탭 순서와 기본 설정이 잡힙니다. 나중에 언제든 바꿀 수 있습니다.</p>
-    <div class="entry-grid" id="entryGrid"></div>
-  </div>
 
-  <nav id="tabs" hidden>
+  <nav id="tabs">
     <button data-p="data" aria-selected="true">데이터<span class="n" id="nData"></span></button>
     <button data-p="ts" aria-selected="false">시계열</button>
     <button data-p="xy" aria-selected="false">상관</button>
@@ -38,10 +32,6 @@
   </nav>
 
 
-  <div class="modebar" id="modeBar" hidden>
-    <span class="mtag" id="modeTag"></span>
-    <span class="muted" id="modeHint"></span>
-    <div class="spacer"></div>
     <button class="b btn-ghost btn-sm" id="modeSwitch">모드 바꾸기</button>
   </div>
 
@@ -76,7 +66,7 @@
   </div>
 
   <!-- ===== 데이터 ===== -->
-  <section data-page="data" hidden>
+  <section data-page="data">
     <div class="card">
       <div class="drop" id="drop">
         <div class="big">데이터 파일을 불러오세요</div>
@@ -355,17 +345,17 @@
 </div>
 
 <!-- 순서가 중요하다. core → parse → store → plot → 화면들 → app -->
-<script src="js/core.js?v=15"></script>
-<script src="js/parse.js?v=15"></script>
-<script src="js/store.js?v=15"></script>
-<script src="js/plot.js?v=15"></script>
-<script src="js/dsp.js?v=15"></script>
-<script src="js/ts.js?v=15"></script>
-<script src="js/xy.js?v=15"></script>
-<script src="js/sp.js?v=15"></script>
-<script src="js/cable.js?v=15"></script>
-<script src="js/agg.js?v=15"></script>
-<script src="js/ui.js?v=15"></script>
-<script src="js/app.js?v=15"></script>
+<script src="js/core.js?v=16"></script>
+<script src="js/parse.js?v=16"></script>
+<script src="js/store.js?v=16"></script>
+<script src="js/plot.js?v=16"></script>
+<script src="js/dsp.js?v=16"></script>
+<script src="js/ts.js?v=16"></script>
+<script src="js/xy.js?v=16"></script>
+<script src="js/sp.js?v=16"></script>
+<script src="js/cable.js?v=16"></script>
+<script src="js/agg.js?v=16"></script>
+<script src="js/ui.js?v=16"></script>
+<script src="js/app.js?v=16"></script>
 </body>
 </html>

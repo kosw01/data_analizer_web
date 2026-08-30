@@ -9,26 +9,6 @@
 
 const store = { tables: [], channels: [] };
 
-/* 진입점 — 파일을 나누는 게 아니라 "이번에 뭘 하려는지"를 담는다.
-   탭 순서와 기본값만 달라지고 기능은 전부 살아 있다 */
-const MODES = {
-  raw: {
-    label: "원시 데이터",
-    desc: "진동·가속도 · FFT · 케이블 장력",
-    hint: "등간격으로 촘촘히 수집된 신호",
-    tabs: ["data", "sp", "cb", "ts", "xy", "ag"],
-    landing: "sp",
-    defaults: { agUnit: "hour", spN: 4096, cbN: 16384, tsYMode: "shared" }
-  },
-  stat: {
-    label: "통계 데이터",
-    desc: "장기 추이 · 상관 · 기간 통계",
-    hint: "10분·1시간 간격으로 요약된 값",
-    tabs: ["data", "ag", "ts", "xy", "sp", "cb"],
-    landing: "ag",
-    defaults: { agUnit: "day", spN: 4096, cbN: 16384, tsYMode: "norm" }
-  }
-};
 
 /* 관리기준선 — 미리 저장하지 않고 그래프를 세팅하는 동안만 쓴다. 최대 4개 */
 const LIMIT_TONES = {
@@ -51,7 +31,6 @@ const ui = {
   page: "data", tsSel: new Set(), xyX: null, xySel: new Set(), agSel: new Set(),
   range: { mode: "all", tStart: null, tEnd: null, sStart: null, sEnd: null },
   spX: null, cbX: null, cbList: [], cbModes: [], rangeOpen: false,
-  mode: null,          // "raw" | "stat" | null(아직 안 고름)
 
   cfg: {
     ts: { title:"", xLabel:"", yLabel:"", yMin:"", yMax:"", lineWidth:1.4, ratio:"4:3", grid:true, limits: newLimits() },

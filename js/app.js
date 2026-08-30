@@ -37,7 +37,6 @@ async function loadFiles(fileList) {
   }
   $("prog").hidden = true;
   renderFiles(); renderChannels();
-  checkModeFit();
 }
 
 $("pick").onclick = () => $("file").click();
@@ -51,23 +50,6 @@ drop.addEventListener("drop", e => { if (e.dataTransfer.files.length) loadFiles(
 $("tabs").addEventListener("click", e => {
   const b = e.target.closest("button");
   if (b) gotoTab(b.dataset.p);
-});
-
-/* 진입점 */
-$("entryGrid").addEventListener("click", e => {
-  const b = e.target.closest("button[data-mode]");
-  if (b) applyMode(b.dataset.mode);
-});
-$("modeSwitch").onclick = () => {
-  $("entryCard").hidden = false;
-  $("tabs").hidden = true;
-  $("modeBar").hidden = true;
-  $("rangeBar").hidden = true;
-  document.querySelectorAll("section[data-page]").forEach(s => s.hidden = true);
-};
-$("modeBar").addEventListener("click", e => {
-  const b = e.target.closest("button[data-to]");
-  if (b) { applyMode(b.dataset.to, true); checkModeFit(); }
 });
 
 $("files").addEventListener("click", e => {
@@ -148,7 +130,7 @@ $("reset").onclick = () => {
   ui.range = { mode: "all", tStart: null, tEnd: null, sStart: null, sEnd: null };
   landed = false;
   renderFiles(); renderChannels(); renderRangeBar();
-  if (ui.mode) { checkModeFit(); gotoTab("data"); }
+  gotoTab("data");
 };
 
 let rt;
@@ -329,4 +311,4 @@ $("cbList").addEventListener("click", e => {
 });
 
 /* 시작 */
-renderEntry();
+gotoTab("data");
