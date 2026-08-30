@@ -59,12 +59,18 @@
   .file-name { font-weight:700; font-size:15px; word-break:break-all; }
   .file-meta { font-size:13px; color:var(--textDim); margin-top:2px; }
 
-  .chips { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px 14px; margin:12px 0; }
   .chip { display:inline-flex; align-items:center; gap:6px; border-radius:12px; padding:6px 10px; font-size:12.5px; font-weight:600; background:var(--chipBg); color:var(--textNormal); }
   .chip .k { color:var(--textDim); font-weight:500; }
-  .chip.ok { background:var(--successBg); color:var(--success); }
-  .chip.warn { background:var(--warnBg); color:var(--warn); }
-  .chip.bad { background:var(--dangerBg); color:var(--danger); }
+  /* 상태 배지는 배경 없이 원색 굵은 글자만 쓴다.
+     성공·위험·경고의 원색은 흰 바탕 위 글자용이라 채움색으로 쓰면 탁해 보인다.
+     배경이 없어 서로 붙어 보이므로 좌우 여백을 줄이고 줄 간격을 늘린다. */
+  .chip.ok, .chip.warn, .chip.bad {
+    background:transparent; padding:6px 2px; font-weight:700;
+  }
+  .chip.ok { color:var(--success); }
+  .chip.warn { color:var(--warn); }
+  .chip.bad { color:var(--danger); }
   .chip.hz { background:var(--lightBg); color:var(--deep); }
   .chip input { width:64px; border:none; background:transparent; color:inherit; font-family:inherit; font-size:12.5px; font-weight:700; text-align:right; border-bottom:1px solid currentColor; padding:0 2px; }
 
